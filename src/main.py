@@ -1,6 +1,7 @@
 import tkinter as tk
 
 import countdown
+from colours import *
 
 
 def main() -> None:
@@ -8,7 +9,7 @@ def main() -> None:
     Main function of app.
     """
     root = tk.Tk()
-    root.tk_setPalette(background="white", foreground="black")
+    root.tk_setPalette(background=DEFAULT_BACKGROUND, foreground=BLACK)
     countdown.MainMenu(root).pack()
     root.mainloop()
 
