@@ -3,6 +3,8 @@ SILVER = "#c0c0c0"
 GOLD = "#ffd700"
 PLATINUM = "#e5e4e2"
 
+RED = "#ff0000"
+ORANGE = "#ffa500"
 GREEN = "#50c878"
 GREY = "#808080"
 BLACK = "#000000"

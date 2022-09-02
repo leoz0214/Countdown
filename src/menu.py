@@ -1,15 +1,14 @@
-from collections import namedtuple
 import tkinter as tk
+from collections import namedtuple
 
+import game
 from colours import *
+from font import ink_free
+
 
 TieredStatistic = namedtuple("TieredStatistic", "bronze silver gold platinum")
 
 WIN_STREAK_CATEGORIES = TieredStatistic(2, 5, 20, 78)
-
-
-def ink_free(size: int, bold: bool = False) -> tuple:
-    return ("Ink Free", size, "bold") if bold else ("Ink Free", size)
 
 
 class MainMenu(tk.Frame):
@@ -27,13 +26,20 @@ class MainMenu(tk.Frame):
             self, font=ink_free(100, True), text="Countdown")
         self.level_label_frame = LevelLabelFrame(self, 1, 0)
         self.win_streak_label = CurrentWinStreakLabel(self, 0)
-        self.main_menu_options_frame = MainMenuOptionsFrame(self)
+        self.main_menu_options_frame = MainMenuNavigationFrame(self)
 
         self.title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
-        self.level_label_frame.grid(row=1, column=0, pady=10)
-        self.win_streak_label.grid(row=2, column=0, pady=10)
+        self.level_label_frame.grid(row=1, column=0, pady=10, sticky="s")
+        self.win_streak_label.grid(row=2, column=0, pady=10, sticky="n")
         self.main_menu_options_frame.grid(
-            row=1, column=1, rowspan=2, sticky="n")
+            row=1, column=1, rowspan=2, padx=10, sticky="n")
+    
+    def play(self) -> None:
+        """
+        Starts the game.
+        """
+        self.destroy()
+        game.Game(self.root).pack()
 
 
 class LevelLabelFrame(tk.LabelFrame):
@@ -95,7 +101,7 @@ class CurrentWinStreakLabel(tk.Label):
             master, font=ink_free(15, True), text=text, fg=colour, width=22)
 
 
-class MainMenuOptionsFrame(tk.Frame):
+class MainMenuNavigationFrame(tk.Frame):
     """
     A frame of buttons which allows the player to
     navigate through the app.
@@ -105,5 +111,32 @@ class MainMenuOptionsFrame(tk.Frame):
         super().__init__(master)
 
         self.play_button = tk.Button(
-            self, font=ink_free(25, True), text="Play", width=10, border=5)
-        self.play_button.pack()
+            self, font=ink_free(25, True), text="Play", relief="ridge",
+            bg=ORANGE, activebackground=GREEN, width=10, border=10,
+            command=master.play)
+        self.stats_button = tk.Button(
+            self, font=ink_free(15), text="Stats",
+            bg=ORANGE, activebackground=GREEN, width=15, border=3)
+        self.achievements_button = tk.Button(
+            self, font=ink_free(15), text="Achievements",
+            bg=ORANGE, activebackground=GREEN, width=15, border=3)
+        self.history_button = tk.Button(
+            self, font=ink_free(15), text="History",
+            bg=ORANGE, activebackground=GREEN, width=15, border=3)
+        self.options_button = tk.Button(
+            self, font=ink_free(15), text="Options",
+            bg=ORANGE, activebackground=GREEN, width=15, border=3)
+        self.tutorial_button = tk.Button(
+            self, font=ink_free(15), text="Tutorial",
+            bg=ORANGE, activebackground=GREEN, width=15, border=3)
+        self.credits_button = tk.Button(
+            self, font=ink_free(15), text="Credits",
+            bg=ORANGE, activebackground=GREEN, width=15, border=3)
+
+        self.play_button.pack(pady=5)
+        self.stats_button.pack(pady=5)
+        self.achievements_button.pack(pady=5)
+        self.history_button.pack(pady=5)
+        self.options_button.pack(pady=5)
+        self.tutorial_button.pack(pady=5)
+        self.credits_button.pack(pady=5)
