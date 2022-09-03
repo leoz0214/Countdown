@@ -26,12 +26,12 @@ class MainMenu(tk.Frame):
             self, font=ink_free(100, True), text="Countdown")
         self.level_label_frame = LevelLabelFrame(self, 1, 0)
         self.win_streak_label = CurrentWinStreakLabel(self, 0)
-        self.main_menu_options_frame = MainMenuNavigationFrame(self)
+        self.navigation_frame = MainMenuNavigationFrame(self)
 
         self.title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
         self.level_label_frame.grid(row=1, column=0, pady=10, sticky="s")
         self.win_streak_label.grid(row=2, column=0, pady=10, sticky="n")
-        self.main_menu_options_frame.grid(
+        self.navigation_frame.grid(
             row=1, column=1, rowspan=2, padx=10, sticky="n")
     
     def play(self) -> None:
