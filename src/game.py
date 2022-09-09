@@ -4,17 +4,32 @@ import secrets
 from pygame import mixer
 
 import menu
+import generate
 from colours import *
 from font import ink_free
 
 
+mixer.init()
+
 NUMBER_COUNT = 7
 MAX_SMALL_COUNT = MAX_BIG_COUNT = 5
 
-mixer.init()
-
 COUNT_SFX = mixer.Sound("./audio/count.wav")
 GO_SFX = mixer.Sound("./audio/go.wav")
+COUNTDOWN_MUSIC = mixer.Sound("./audio/countdown.wav")
+
+SHUFFLES_BEFORE_REAL_NUMBER = 25
+SHUFFLE_DELAY_MS = 50
+
+
+def draw_circle(
+    canvas: tk.Canvas, x: int, y: int, radius: int,
+    fill: str | None = None) -> None:
+    """
+    Draws a circle with a given centre and radius onto the canvas.
+    """
+    canvas.create_oval(
+        x - radius, y - radius, x + radius, y + radius, fill=fill)
 
 
 class Game(tk.Frame):
@@ -41,8 +56,10 @@ class Game(tk.Frame):
         """
         Starts the game.
         """
+        numbers = [
+            int(label.cget("text"))
+            for label in self.frame.selected_numbers_frame.number_labels]
         self.frame.destroy()
-        numbers = self.frame.selected_numbers_frame.numbers
         self.frame = CountdownFrame(self, numbers)
         self.frame.pack()
 
@@ -78,7 +95,7 @@ class SelectNumbersFrame(tk.Frame):
         Adds a number to the selection.
         """
         count = self.selected_numbers_frame.count
-        self.selected_numbers_frame.numbers[count].config(
+        self.selected_numbers_frame.number_labels[count].config(
             text=number)
         self.selected_numbers_frame.count += 1
 
@@ -94,17 +111,24 @@ class SelectedNumbersFrame(tk.Frame):
     Holds the numbers which are selected randomly.
     """
 
-    def __init__(self, master: SelectNumbersFrame) -> None:
+    def __init__(
+        self, master: tk.Frame, numbers: list[int] | None = None) -> None:
         super().__init__(master)
-        self.count = 0
-        self.numbers = [
+        self.number_labels = [
             tk.Label(
-                self, font=ink_free(50), width=4, height=1,
+                self, font=ink_free(50), width=4, height=1, bg=LIGHT_BLUE,
                 highlightbackground=BLACK, highlightthickness=3)
             for _ in range(NUMBER_COUNT)]
         
-        for box in self.numbers:
-            box.pack(padx=5, side="left")
+        if numbers is not None:
+            self.count = NUMBER_COUNT
+            for label, number in zip(self.number_labels, numbers):
+                label.config(text=number)
+                label.pack(padx=5, side="left")
+        else:
+            self.count = 0
+            for label in self.number_labels:
+                label.pack(padx=5, side="left")
 
 
 class SmallNumbersFrame(tk.Frame):
@@ -255,3 +279,63 @@ class CountdownFrame(tk.Frame):
         """
         self.pre_countdown_label.destroy()
         GO_SFX.stop()
+        target_number = generate.generate_number(self.numbers)
+
+        self.target_number_label = TargetNumberLabel(self, target_number)
+        self.selected_numbers_frame = SelectedNumbersFrame(self, self.numbers)
+
+        self.target_number_label.pack(padx=25, pady=15)
+        self.selected_numbers_frame.pack(padx=10, pady=10)
+
+        self.target_number_label.shuffle_number_display(
+            SHUFFLES_BEFORE_REAL_NUMBER)
+    
+    def count_down(self) -> None:
+        """
+        Starts the 30 second timer.
+        """
+        CountdownClock(self).pack(padx=10, pady=10)
+        COUNTDOWN_MUSIC.play()
+
+
+class TargetNumberLabel(tk.Label):
+    """
+    Holds the number the player must try and get.
+    """
+
+    def __init__(self, master: CountdownFrame, number: int) -> None:
+        super().__init__(
+            master, font=ink_free(100, True), width=4, bg=GREEN,
+            highlightbackground=BLACK, highlightthickness=5)
+        self.master = master
+        self.number = number
+    
+    def shuffle_number_display(self, count: int) -> None:
+        """
+        Displays random numbers which change rapidly.
+        Then, the 30 second countdown begins.
+        """
+        if count:
+            self.config(text=secrets.choice(range(201, 1000)))
+            self.after(
+                SHUFFLE_DELAY_MS,
+                lambda: self.shuffle_number_display(count - 1))
+        else:
+            # Shuffle complete, begin countdown here.
+            self.config(text=self.number)
+            self.master.count_down()
+
+
+class CountdownClock(tk.Canvas):
+    """
+    Displays the time remaining for the player to form a solution
+    before automatically being directed to enter a solution.
+    """
+
+    def __init__(self, master: CountdownFrame) -> None:
+        super().__init__(master, width=250, height=250)
+        draw_circle(self, 125, 125, 123, SILVER)
+        self.create_line(125, 0, 125, 250, fill=BLACK)
+        self.create_line(0, 125, 250, 125, fill=BLACK)
+        draw_circle(self, 125, 125, 10, GREY)
+
