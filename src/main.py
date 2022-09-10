@@ -10,7 +10,8 @@ def main() -> None:
     """
     root = tk.Tk()
     root.tk_setPalette(background=DEFAULT_BACKGROUND, foreground=BLACK)
-    menu.MainMenu(root).pack()
+    main_menu = menu.MainMenu(root)
+    main_menu.pack()
     root.mainloop()
 
 
