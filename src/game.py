@@ -1,5 +1,8 @@
 import tkinter as tk
 import secrets
+import math
+import itertools
+from timeit import default_timer as timer
 
 from pygame import mixer
 
@@ -21,15 +24,18 @@ COUNTDOWN_MUSIC = mixer.Sound("./audio/countdown.wav")
 SHUFFLES_BEFORE_REAL_NUMBER = 25
 SHUFFLE_DELAY_MS = 50
 
+DURATION_S = 30
+
 
 def draw_circle(
     canvas: tk.Canvas, x: int, y: int, radius: int,
-    fill: str | None = None) -> None:
+    fill: str | None = None, outline: str = "black") -> None:
     """
     Draws a circle with a given centre and radius onto the canvas.
     """
     canvas.create_oval(
-        x - radius, y - radius, x + radius, y + radius, fill=fill)
+        x - radius, y - radius, x + radius, y + radius,
+        fill=fill, outline=outline)
 
 
 class Game(tk.Frame):
@@ -271,7 +277,7 @@ class CountdownFrame(tk.Frame):
         COUNT_SFX.play()
 
         self.pre_countdown_label.config(text=seconds)
-        self.after(1000, lambda: self.pre_countdown(seconds-1))
+        self.after(1000, lambda: self.pre_countdown(seconds - 1))
     
     def start(self) -> None:
         """
@@ -283,19 +289,37 @@ class CountdownFrame(tk.Frame):
 
         self.target_number_label = TargetNumberLabel(self, target_number)
         self.selected_numbers_frame = SelectedNumbersFrame(self, self.numbers)
+        self.countdown_clock = CountdownClock(self)
 
         self.target_number_label.pack(padx=25, pady=15)
         self.selected_numbers_frame.pack(padx=10, pady=10)
+        self.countdown_clock.pack(padx=10, pady=10)
 
         self.target_number_label.shuffle_number_display(
             SHUFFLES_BEFORE_REAL_NUMBER)
     
-    def count_down(self) -> None:
+    def count_down(self, first: bool = False) -> None:
         """
         Starts the 30 second timer.
         """
-        CountdownClock(self).pack(padx=10, pady=10)
-        COUNTDOWN_MUSIC.play()
+        if first:
+            self.start_time = timer()
+            COUNTDOWN_MUSIC.play()
+        elif timer() - self.start_time >= DURATION_S:
+            return self.end()
+        else:
+            self.countdown_clock.destroy()
+            time_passed = timer() - self.start_time
+            # Refresh the clock.
+            self.countdown_clock = CountdownClock(self, time_passed)
+            self.countdown_clock.pack(padx=10, pady=10)
+        self.after(25, self.count_down)
+    
+    def end(self) -> None:
+        """
+        Ends the round, leading the player to enter a solution.
+        """
+        COUNTDOWN_MUSIC.stop()
 
 
 class TargetNumberLabel(tk.Label):
@@ -323,7 +347,7 @@ class TargetNumberLabel(tk.Label):
         else:
             # Shuffle complete, begin countdown here.
             self.config(text=self.number)
-            self.master.count_down()
+            self.master.count_down(True)
 
 
 class CountdownClock(tk.Canvas):
@@ -332,10 +356,112 @@ class CountdownClock(tk.Canvas):
     before automatically being directed to enter a solution.
     """
 
-    def __init__(self, master: CountdownFrame) -> None:
+    def __init__(
+        self, master: CountdownFrame, seconds_passed: float = 0) -> None:
         super().__init__(master, width=250, height=250)
-        draw_circle(self, 125, 125, 123, SILVER)
-        self.create_line(125, 0, 125, 250, fill=BLACK)
-        self.create_line(0, 125, 250, 125, fill=BLACK)
-        draw_circle(self, 125, 125, 10, GREY)
+        radius = 123
+        centx = 125
+        centy = 125
+        draw_circle(self, centx, centy, radius, SILVER)
 
+        # 1 degree = 1/6 of a second.
+        angle = int(seconds_passed * 6)
+
+        start = 90 - angle if angle <= 90 else 360 - (angle - 90)
+        # Green means plenty of time left,  red means time's nearly up!
+        arc_fill = CLOCK_COLOURS[
+            max(0, int(angle / 180 * len(CLOCK_COLOURS)) - 1)]
+        self.create_arc(
+            3, 3, 247, 247, start=start, extent=angle,
+            fill=arc_fill, outline="")
+
+        draw_circle(self, centx, centy, 60, SILVER, "")
+        self.create_line(centx, 0, centx, 250, fill=BLACK, width=2)
+        self.create_line(0, centy, 250, centy, fill=BLACK)
+        draw_circle(self, centx, centy, 15, GREY, "")
+
+        # Create indicators (5, 10, 20, 25, 35, 40, 50, 55).
+
+        # For 5, 25, 35 and 55.
+        steep_gradient_max_x = radius * math.cos(math.radians(60))
+        steep_gradient_max_y = (
+            radius ** 2 - steep_gradient_max_x ** 2) ** 0.5
+
+        # For 10, 20, 40, 50
+        gentle_gradient_max_x = radius * math.cos(math.radians(30))
+        gentle_gradient_max_y = (
+            radius ** 2 - gentle_gradient_max_x ** 2) ** 0.5
+
+        for max_x, max_y in (
+            (steep_gradient_max_x, steep_gradient_max_y),
+            (gentle_gradient_max_x, gentle_gradient_max_y)
+        ):
+            for x_op, y_op in itertools.product("+-", repeat=2):
+                if x_op == "+":
+                    x1 = centx + 100/radius * max_x,
+                    x2 = centx + 120/radius * max_x
+                else:
+                    x1 = centx - 100/radius * max_x
+                    x2 = centx - 120/radius * max_x
+                if y_op == "+":
+                    y1 = centy + 100/radius * max_y
+                    y2 = centy + 120/radius * max_y
+                else:
+                    y1 = centy - 100/radius * max_y
+                    y2 = centy - 120/radius * max_y
+
+                # White if passed.
+                if (
+                    max_x == steep_gradient_max_x and x_op == "+" and
+                    (
+                        (y_op == "-" and angle > 30) or
+                        (y_op == "+" and angle > 150)
+                    )
+                ): 
+                    self.create_line(x1, y1, x2, y2, fill=WHITE)
+                elif (
+                    max_x == gentle_gradient_max_x and x_op == "+" and
+                    (
+                        (y_op == "-" and angle > 60) or
+                        (y_op == "+" and angle > 120)
+                    )
+                ):
+                    self.create_line(x1, y1, x2, y2, fill=WHITE)
+                else:
+                    self.create_line(x1, y1, x2, y2, fill=BLACK)
+        
+        # Creates the countdown pointer.
+        if angle == 0:
+            self.create_polygon(
+                centx - 10, centy, centx + 10, centy, centx, 0, fill=GREY)
+        elif angle == 90:
+            self.create_polygon(
+                centx, centy - 10, centx, centy + 10, centx + radius, centy,
+                fill=GREY)
+        elif angle == 180:
+            self.create_polygon(
+                centx - 10, centy, centx + 10, centy, centx, centy + radius,
+                fill=GREY)
+        else:
+            if angle < 90:
+                x_shift = 10 * math.cos(math.radians(angle))
+                y_shift = (10 ** 2 - x_shift ** 2) ** 0.5
+
+                x_right = radius * math.cos(math.radians(90 - angle))
+                y_up = (radius ** 2 - x_right ** 2) ** 0.5
+
+                self.create_polygon(
+                    centx - x_shift, centy - y_shift,
+                    centx + x_shift, centy + y_shift,
+                    centx + x_right, centy - y_up, fill=GREY)
+            else:
+                x_shift = 10 * math.sin(math.radians(angle - 90))
+                y_shift = (100 - x_shift ** 2) ** 0.5
+
+                x_right = radius * math.cos(math.radians(angle - 90))
+                y_down = (radius ** 2 - x_right ** 2) ** 0.5
+
+                self.create_polygon(
+                    centx + x_shift, centy - y_shift,
+                    centx - x_shift, centy + y_shift,
+                    centx + x_right, centy + y_down, fill=GREY)
