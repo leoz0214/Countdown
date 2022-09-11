@@ -69,6 +69,17 @@ class Game(tk.Frame):
         self.frame = CountdownFrame(self, numbers)
         self.frame.pack()
 
+    def end(self) -> None:
+        """
+        Ends the round, leading the player to enter a solution.
+        """
+        numbers = self.frame.numbers
+        target = self.frame.target
+        COUNTDOWN_MUSIC.stop()
+        self.frame.destroy()
+        self.frame = EnterSolutionFrame(self, numbers, target)
+        self.frame.pack()
+
 
 class SelectNumbersFrame(tk.Frame):
     """
@@ -285,9 +296,9 @@ class CountdownFrame(tk.Frame):
         """
         self.pre_countdown_label.destroy()
         GO_SFX.stop()
-        target_number = generate.generate_number(self.numbers)
+        self.target = generate.generate_number(self.numbers)
 
-        self.target_number_label = TargetNumberLabel(self, target_number)
+        self.target_number_label = TargetNumberLabel(self, self.target)
         self.selected_numbers_frame = SelectedNumbersFrame(self, self.numbers)
         self.countdown_clock = CountdownClock(self)
 
@@ -306,7 +317,7 @@ class CountdownFrame(tk.Frame):
             self.start_time = timer()
             COUNTDOWN_MUSIC.play()
         elif timer() - self.start_time >= DURATION_S:
-            return self.end()
+            return self.master.end()
         else:
             self.countdown_clock.destroy()
             time_passed = timer() - self.start_time
@@ -314,12 +325,6 @@ class CountdownFrame(tk.Frame):
             self.countdown_clock = CountdownClock(self, time_passed)
             self.countdown_clock.pack(padx=10, pady=10)
         self.after(25, self.count_down)
-    
-    def end(self) -> None:
-        """
-        Ends the round, leading the player to enter a solution.
-        """
-        COUNTDOWN_MUSIC.stop()
 
 
 class TargetNumberLabel(tk.Label):
@@ -415,16 +420,14 @@ class CountdownClock(tk.Canvas):
                     max_x == steep_gradient_max_x and x_op == "+" and
                     (
                         (y_op == "-" and angle > 30) or
-                        (y_op == "+" and angle > 150)
-                    )
+                        (y_op == "+" and angle > 150))
                 ): 
                     self.create_line(x1, y1, x2, y2, fill=WHITE)
                 elif (
                     max_x == gentle_gradient_max_x and x_op == "+" and
                     (
                         (y_op == "-" and angle > 60) or
-                        (y_op == "+" and angle > 120)
-                    )
+                        (y_op == "+" and angle > 120))
                 ):
                     self.create_line(x1, y1, x2, y2, fill=WHITE)
                 else:
@@ -465,3 +468,206 @@ class CountdownClock(tk.Canvas):
                     centx + x_shift, centy - y_shift,
                     centx - x_shift, centy + y_shift,
                     centx + x_right, centy + y_down, fill=GREY)
+
+
+class EnterSolutionFrame(tk.Frame):
+    """
+    Where the player enters a solution with their selected numbers
+    for their given number.
+    """
+
+    def __init__(self, master: Game, numbers: list[int], target: int) -> None:
+        super().__init__(master)
+        self.master = master
+        self.numbers = numbers
+        self.target = target
+
+        self.title_label = tk.Label(
+            self, font=ink_free(50, True), text="Enter your best solution!")
+        self.solution_label = SolutionLabel(self)
+        self.solution_buttons = SolutionButtonsFrame(self)
+        self.used_numbers = []
+        
+        self.title_label.pack(padx=25, pady=15)
+        self.solution_label.pack(padx=10, pady=10)
+        self.solution_buttons.pack(padx=10, pady=10)
+    
+    def add(self, to_add: str, from_pop: bool = False) -> None:
+        """
+        Adds a number, operator or parenthesis to the solution.
+        """
+        current_solution = self.solution_label.get()
+        # Automatically add 'x' sign to indicate multiplication
+        # if a number or ) is followed by (
+        new_solution = (
+            current_solution + "x" + to_add
+            if current_solution and to_add == "(" and
+                (current_solution[-1].isdigit()
+                    or current_solution[-1] == ")")
+            else current_solution + to_add)
+
+        self.solution_label.config(text=new_solution)
+
+        if to_add.isdigit() or to_add == ")":
+            # Next, an operator or parenthesis is expected.
+            for button in self.solution_buttons:
+                button.config(
+                    state=(
+                    "disabled" if button.cget("text").isdigit()
+                    else "normal"))
+        else:
+            # Next, a number or closing parenthesis is expected.
+            for button in self.solution_buttons:
+                button.config(
+                    state=(
+                    "normal" if button.cget("text").isdigit()
+                    or button.cget("text") == "(" else "disabled"))
+        
+        if to_add.isdigit() and not from_pop:
+            self.used_numbers.append(to_add)
+        
+        for number in self.used_numbers:
+            for button in self.solution_buttons:
+                # Disables used numbers in grey instead of red.
+                if (
+                    button.cget("text") == number
+                    and (
+                        button.cget("disabledforeground") != GREY
+                        or button.cget("state") == "normal")
+                ):
+                    if (
+                        button.cget("disabledforeground") != GREY
+                        or button.cget("state") == "normal"
+                    ):
+                        button.config(
+                            state="disabled", disabledforeground=GREY)
+                    break
+        
+        # Disable all except closing parenthesis or remove last input.
+        if len(self.used_numbers) == NUMBER_COUNT:
+            for button in self.solution_buttons:
+                button.config(
+                    state="disabled" if button.cget("text") not in ")←"
+                    else "normal")
+        
+        back_button = self.solution_buttons.buttons[1][-1]
+        back_button.config(state="normal")
+    
+    def pop(self) -> None:
+        """
+        Removes the previous input from the solution.
+        """
+        # Gets last input: either a number, operator or parenthesis.
+        index = -1
+        current_solution = self.solution_label.get()
+
+        while current_solution[index:].isdigit():
+            if abs(index) >= len(current_solution):
+                break
+            index -= 1
+        else:
+            index = min(index + 1, -1)
+
+        to_remove = current_solution[index:]
+        if to_remove.isdigit():
+            # Removes number from used numbers as needed.
+            self.used_numbers.remove(to_remove)
+            for button in self.solution_buttons:
+                if (
+                    button.cget("state") == "disabled"
+                    and button.cget("text") == to_remove
+                ):
+                    button.config(state="normal", disabledforeground=RED)
+                    break
+
+        new_solution = current_solution[:index]
+
+        if not new_solution:
+            # Empty
+            self.solution_label.config(text="")
+            for button in self.solution_buttons:
+                button.config(
+                    state=(
+                        "normal" if button.cget("text").isdigit()
+                        or button.cget("text") == "(" else "disabled"),
+                    disabledforeground=RED)
+            return
+
+        # Re-adds input before the removed input.
+        index = -1
+        while new_solution[index:].isdigit():
+            if abs(index) >= len(new_solution):
+                break
+            index -= 1
+        else:
+            index = min(index + 1, -1)
+        
+        self.solution_label.config(text=new_solution[:index])
+        self.add(new_solution[index:], True)
+        
+
+class SolutionLabel(tk.Label):
+    """
+    Where the player sees the solution they input.
+    """
+
+    def __init__(self, master: EnterSolutionFrame) -> None:
+        super().__init__(
+            master, font=ink_free(20), width=65, height=2, bg=GREEN,
+            highlightbackground=BLACK, highlightthickness=5)
+    
+    def get(self) -> str:
+        """
+        Returns current solution entry.
+        """
+        return self.cget("text")
+
+
+class SolutionButtonsFrame(tk.Frame):
+    """
+    Add or remove numbers, operators and parentheses to the solution.
+    """
+
+    def __init__(self, master: EnterSolutionFrame) -> None:
+        super().__init__(master)
+        self.master = master
+
+        self.buttons = [] # In rows.
+        
+        self.buttons.append([
+            SolutionInputButton(self, str(number))
+            for number in master.numbers])
+        
+        row_2 = [SolutionInputButton(self, operator) for operator in "+-x÷()"]
+        back_button = tk.Button(
+            self, font=ink_free(25), text="←", width=4, border=3, bg=GREY,
+            activebackground=RED, disabledforeground=RED, command=master.pop)
+        row_2.append(back_button)
+
+        for button in row_2:
+            if button.cget("text") != "(":
+                button.config(state="disabled")
+
+        self.buttons.append(row_2)
+
+        for i, row in enumerate(self.buttons):
+            for j, button in enumerate(row):
+                button.grid(row=i, column=j, padx=5, pady=5)
+    
+    def __iter__(self) -> None:
+        for row in self.buttons:
+            for button in row:
+                yield button
+
+
+class SolutionInputButton(tk.Button):
+    """
+    Adds a number, operator or parenthesis to the solution.
+    Obviously, each number can only be used once.
+    """
+
+    def __init__(self, master: SolutionButtonsFrame, to_add: str) -> None:
+        super().__init__(
+            master, font=ink_free(25), text=to_add, width=4, border=3,
+            bg=ORANGE, activebackground=GREEN, disabledforeground=RED,
+            command=lambda: master.master.add(to_add))
