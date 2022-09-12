@@ -26,6 +26,8 @@ SHUFFLE_DELAY_MS = 50
 
 DURATION_S = 30
 
+MAX_SOLUTION_LENGTH = 64
+
 
 def draw_circle(
     canvas: tk.Canvas, x: int, y: int, radius: int,
@@ -486,7 +488,10 @@ class EnterSolutionFrame(tk.Frame):
             self, font=ink_free(50, True), text="Enter your best solution!")
         self.solution_label = SolutionLabel(self)
         self.solution_buttons = SolutionButtonsFrame(self)
+
         self.used_numbers = []
+        self.opening_parentheses = 0
+        self.closing_parentheses = 0
         
         self.title_label.pack(padx=25, pady=15)
         self.solution_label.pack(padx=10, pady=10)
@@ -497,14 +502,24 @@ class EnterSolutionFrame(tk.Frame):
         Adds a number, operator or parenthesis to the solution.
         """
         current_solution = self.solution_label.get()
+
         # Automatically add 'x' sign to indicate multiplication
         # if a number or ) is followed by (
-        new_solution = (
-            current_solution + "x" + to_add
-            if current_solution and to_add == "(" and
-                (current_solution[-1].isdigit()
-                    or current_solution[-1] == ")")
-            else current_solution + to_add)
+        if (
+            current_solution and to_add == "("
+            and (
+                current_solution[-1].isdigit()
+                or current_solution[-1] == ")")
+        ):
+            if len(current_solution) >= MAX_SOLUTION_LENGTH - 1:
+                # Cannot insert two more characters 'x('
+                return
+            new_solution = current_solution + "x" + to_add
+        else:
+            if len(current_solution) >= MAX_SOLUTION_LENGTH - len(to_add) + 1:
+                # Cannot insert n more characters.
+                return
+            new_solution = current_solution + to_add
 
         self.solution_label.config(text=new_solution)
 
@@ -535,12 +550,7 @@ class EnterSolutionFrame(tk.Frame):
                         button.cget("disabledforeground") != GREY
                         or button.cget("state") == "normal")
                 ):
-                    if (
-                        button.cget("disabledforeground") != GREY
-                        or button.cget("state") == "normal"
-                    ):
-                        button.config(
-                            state="disabled", disabledforeground=GREY)
+                    button.config(state="disabled", disabledforeground=GREY)
                     break
         
         # Disable all except closing parenthesis or remove last input.
@@ -549,6 +559,17 @@ class EnterSolutionFrame(tk.Frame):
                 button.config(
                     state="disabled" if button.cget("text") not in ")←"
                     else "normal")
+        
+        if to_add == "(" and not from_pop:
+            self.opening_parentheses += 1
+        elif to_add == ")" and not from_pop:
+            self.closing_parentheses += 1
+        
+        if self.closing_parentheses >= self.opening_parentheses:
+            # Cannot add closing parentheses with no corresponding
+            # opening parentheses.
+            closing_parentheses_button = self.solution_buttons.buttons[1][-2]
+            closing_parentheses_button.config(state="disabled")
         
         back_button = self.solution_buttons.buttons[1][-1]
         back_button.config(state="normal")
@@ -579,6 +600,10 @@ class EnterSolutionFrame(tk.Frame):
                 ):
                     button.config(state="normal", disabledforeground=RED)
                     break
+        elif to_remove == "(":
+            self.opening_parentheses -= 1
+        elif to_remove == ")":
+            self.closing_parentheses -= 1
 
         new_solution = current_solution[:index]
 
@@ -613,7 +638,8 @@ class SolutionLabel(tk.Label):
 
     def __init__(self, master: EnterSolutionFrame) -> None:
         super().__init__(
-            master, font=ink_free(20), width=65, height=2, bg=GREEN,
+            master, font=ink_free(20),
+            width=MAX_SOLUTION_LENGTH + 1, height=2, bg=GREEN,
             highlightbackground=BLACK, highlightthickness=5)
     
     def get(self) -> str:
