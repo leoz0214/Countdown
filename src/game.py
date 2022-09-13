@@ -4,22 +4,19 @@ import math
 import itertools
 from timeit import default_timer as timer
 
-from pygame import mixer
-
 import menu
 import generate
+import audio
 from colours import *
 from font import ink_free
 
 
-mixer.init()
-
 NUMBER_COUNT = 7
 MAX_SMALL_COUNT = MAX_BIG_COUNT = 5
 
-COUNT_SFX = mixer.Sound("./audio/count.wav")
-GO_SFX = mixer.Sound("./audio/go.wav")
-COUNTDOWN_MUSIC = mixer.Sound("./audio/countdown.wav")
+COUNT_SFX = audio.get_sfx("count.wav")
+GO_SFX = audio.get_sfx("go.wav")
+COUNTDOWN_MUSIC = audio.get_music("countdown.wav")
 
 SHUFFLES_BEFORE_REAL_NUMBER = 25
 SHUFFLE_DELAY_MS = 50
@@ -488,6 +485,7 @@ class EnterSolutionFrame(tk.Frame):
             self, font=ink_free(50, True), text="Enter your best solution!")
         self.solution_label = SolutionLabel(self)
         self.solution_buttons = SolutionButtonsFrame(self)
+        self.option_buttons = EnterSolutionOptionsFrame(self)
 
         self.used_numbers = []
         self.opening_parentheses = 0
@@ -496,6 +494,7 @@ class EnterSolutionFrame(tk.Frame):
         self.title_label.pack(padx=25, pady=15)
         self.solution_label.pack(padx=10, pady=10)
         self.solution_buttons.pack(padx=10, pady=10)
+        self.option_buttons.pack(padx=10, pady=(50, 10))
     
     def add(self, to_add: str, from_pop: bool = False) -> None:
         """
@@ -573,6 +572,13 @@ class EnterSolutionFrame(tk.Frame):
         
         back_button = self.solution_buttons.buttons[1][-1]
         back_button.config(state="normal")
+
+        self.option_buttons.reset_button.config(state="normal")
+        self.option_buttons.submit_button.config(
+            state=(
+                "normal" if
+                self.opening_parentheses == self.closing_parentheses
+                and (to_add.isdigit() or to_add == ")") else "disabled"))
     
     def pop(self) -> None:
         """
@@ -608,14 +614,7 @@ class EnterSolutionFrame(tk.Frame):
         new_solution = current_solution[:index]
 
         if not new_solution:
-            # Empty
-            self.solution_label.config(text="")
-            for button in self.solution_buttons:
-                button.config(
-                    state=(
-                        "normal" if button.cget("text").isdigit()
-                        or button.cget("text") == "(" else "disabled"),
-                    disabledforeground=RED)
+            self.reset()
             return
 
         # Re-adds input before the removed input.
@@ -629,7 +628,51 @@ class EnterSolutionFrame(tk.Frame):
         
         self.solution_label.config(text=new_solution[:index])
         self.add(new_solution[index:], True)
-        
+    
+    def reset(self) -> None:
+        """
+        Resets solution input.
+        """
+        self.used_numbers = []
+        self.opening_parentheses = 0
+        self.closing_parentheses = 0
+
+        self.solution_label.config(text="")
+        for button in self.solution_buttons:
+            button.config(
+                state=(
+                    "normal" if button.cget("text").isdigit()
+                    or button.cget("text") == "(" else "disabled"),
+                disabledforeground=RED)
+
+        self.option_buttons.reset_button.config(state="disabled")
+        self.option_buttons.submit_button.config(state="disabled")
+    
+    def submit(self) -> None:
+        """
+        Gets a solution from the player and validates it.
+        If correct, the player wins, or else they will be told
+        the solution is incorrect/invalid.
+        """
+        solution = self.solution_label.get()
+        solution = solution.replace("x", "*").replace("÷", "/")
+
+        try:
+            is_correct = round(eval(solution), 10) == self.target
+            if is_correct:
+                pass
+            else:
+                pass
+        except ZeroDivisionError:
+            pass
+    
+    def skip(self) -> None:
+        """
+        Skips submitting a solution if the player has none.
+        This round would be counted as a loss for the player.
+        """
+        pass
+
 
 class SolutionLabel(tk.Label):
     """
@@ -681,6 +724,9 @@ class SolutionButtonsFrame(tk.Frame):
                 button.grid(row=i, column=j, padx=5, pady=5)
     
     def __iter__(self) -> None:
+        """
+        Allows iteration over all buttons in all rows.
+        """
         for row in self.buttons:
             for button in row:
                 yield button
@@ -697,3 +743,32 @@ class SolutionInputButton(tk.Button):
             master, font=ink_free(25), text=to_add, width=4, border=3,
             bg=ORANGE, activebackground=GREEN, disabledforeground=RED,
             command=lambda: master.master.add(to_add))
+
+
+class EnterSolutionOptionsFrame(tk.Frame):
+    """
+    Holds buttons which include:
+    - Allowing the player to reset the solution input
+    - Submitting a solution
+    - Proceed without a solution (no solution found)
+    """
+
+    def __init__(self, master: EnterSolutionFrame) -> None:
+        super().__init__(master)
+        self.reset_button = tk.Button(
+            self, font=ink_free(25), text="Reset", width=10, border=5,
+            bg=ORANGE, activebackground=RED, state="disabled",
+            command=master.reset)
+        
+        self.submit_button = tk.Button(
+            self, font=ink_free(25), text="Submit", width=10, border=10,
+            bg=ORANGE, activebackground=GREEN, state="disabled",
+            command=master.submit)
+
+        self.skip_button = tk.Button(
+            self, font=ink_free(25), text="No solution", width=10, border=5,
+            bg=ORANGE, activebackground=RED, command=master.skip)
+        
+        self.reset_button.pack(padx=10, side="left")
+        self.submit_button.pack(padx=10, side="left")
+        self.skip_button.pack(padx=10, side="right")
