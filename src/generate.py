@@ -211,5 +211,5 @@ def generate_number(numbers: list[int]) -> int:
     from 201-999 for the player to try and get.
     """
     # Removes too easy numbers from valid numbers.
-    valid = get_valid(numbers) - get_too_easy(numbers)
-    return secrets.choice(tuple(valid))
+    valid = tuple(get_valid(numbers) - get_too_easy(numbers))
+    return secrets.choice(valid)

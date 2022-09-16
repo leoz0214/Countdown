@@ -1,10 +1,12 @@
 import tkinter as tk
+from tkinter import messagebox
 import secrets
 import math
 import itertools
 from timeit import default_timer as timer
 
 import menu
+import end
 import generate
 import audio
 from colours import *
@@ -16,6 +18,8 @@ MAX_SMALL_COUNT = MAX_BIG_COUNT = 5
 
 COUNT_SFX = audio.get_sfx("count.wav")
 GO_SFX = audio.get_sfx("go.wav")
+INCORRECT_SOLUTION_SFX = audio.get_sfx("incorrect.mp3")
+CORRECT_SOLUTION_SFX = audio.get_sfx("correct.mp3")
 COUNTDOWN_MUSIC = audio.get_music("countdown.wav")
 
 SHUFFLES_BEFORE_REAL_NUMBER = 25
@@ -24,6 +28,15 @@ SHUFFLE_DELAY_MS = 50
 DURATION_S = 30
 
 MAX_SOLUTION_LENGTH = 64
+
+KEY_TO_ACTUAL = {
+    "plus": "+",
+    "minus": "-",
+    "asterisk": "x",
+    "slash": "÷",
+    "parenleft": "(",
+    "parenright": ")"
+}
 
 
 def draw_circle(
@@ -78,6 +91,14 @@ class Game(tk.Frame):
         self.frame.destroy()
         self.frame = EnterSolutionFrame(self, numbers, target)
         self.frame.pack()
+    
+    def proceed_to_finish(self, solution: str | None, target: int) -> None:
+        """
+        After solution entry (if any), proceed to finish.
+        """
+        self.destroy()
+        self.root.unbind("<Key>")
+        end.GameEnd(self.root, solution, target).pack()
 
 
 class SelectNumbersFrame(tk.Frame):
@@ -490,11 +511,13 @@ class EnterSolutionFrame(tk.Frame):
         self.used_numbers = []
         self.opening_parentheses = 0
         self.closing_parentheses = 0
-        
+
         self.title_label.pack(padx=25, pady=15)
         self.solution_label.pack(padx=10, pady=10)
         self.solution_buttons.pack(padx=10, pady=10)
         self.option_buttons.pack(padx=10, pady=(50, 10))
+
+        self.master.root.bind("<Key>", self.enter_key)
     
     def add(self, to_add: str, from_pop: bool = False) -> None:
         """
@@ -585,9 +608,11 @@ class EnterSolutionFrame(tk.Frame):
         Removes the previous input from the solution.
         """
         # Gets last input: either a number, operator or parenthesis.
-        index = -1
         current_solution = self.solution_label.get()
+        if not current_solution:
+            return
 
+        index = -1
         while current_solution[index:].isdigit():
             if abs(index) >= len(current_solution):
                 break
@@ -618,6 +643,7 @@ class EnterSolutionFrame(tk.Frame):
             return
 
         # Re-adds input before the removed input.
+        # This prevents code duplication.
         index = -1
         while new_solution[index:].isdigit():
             if abs(index) >= len(new_solution):
@@ -648,6 +674,27 @@ class EnterSolutionFrame(tk.Frame):
         self.option_buttons.reset_button.config(state="disabled")
         self.option_buttons.submit_button.config(state="disabled")
     
+    def enter_key(self, event: tk.Event) -> None:
+        """
+        Takes a key which represents an operator or parenthesis,
+        and if the corresponding button is enabled, the code which
+        the corresponding runs will run by the keybind.
+        """
+        key = event.keysym.lower()
+
+        if key in ("backspace", "left"):
+            self.pop()
+            return
+
+        # If key is not already the actual key, convert to it.
+        key = KEY_TO_ACTUAL.get(key, key)
+
+        for button in self.solution_buttons:
+            if button.cget("text") == key:
+                if button.cget("state") == "normal":
+                    self.add(key)
+                return
+    
     def submit(self) -> None:
         """
         Gets a solution from the player and validates it.
@@ -655,23 +702,28 @@ class EnterSolutionFrame(tk.Frame):
         the solution is incorrect/invalid.
         """
         solution = self.solution_label.get()
-        solution = solution.replace("x", "*").replace("÷", "/")
+        to_evaluate = solution.replace("x", "*").replace("÷", "/")
+        INCORRECT_SOLUTION_SFX.stop()
 
         try:
-            is_correct = round(eval(solution), 10) == self.target
+            is_correct = round(eval(to_evaluate), 10) == self.target
             if is_correct:
-                pass
+                CORRECT_SOLUTION_SFX.play()
+                self.master.proceed_to_finish(solution, self.target)
             else:
-                pass
+                INCORRECT_SOLUTION_SFX.play()
         except ZeroDivisionError:
-            pass
-    
+            messagebox.showerror(
+                "Cannot divide by 0",
+                    "Your solution is invalid because you are trying to "
+                    "divide by 0, but this is undefined.")
+        
     def skip(self) -> None:
         """
-        Skips submitting a solution if the player has none.
-        This round would be counted as a loss for the player.
+        If the player has no solution, they can skip solution entry.
+        This will be counted as a loss.
         """
-        pass
+        self.master.proceed_to_finish(None, self.target)
 
 
 class SolutionLabel(tk.Label):
@@ -767,7 +819,8 @@ class EnterSolutionOptionsFrame(tk.Frame):
 
         self.skip_button = tk.Button(
             self, font=ink_free(25), text="No solution", width=10, border=5,
-            bg=ORANGE, activebackground=RED, command=master.skip)
+            bg=ORANGE, activebackground=RED,
+            command=master.skip)
         
         self.reset_button.pack(padx=10, side="left")
         self.submit_button.pack(padx=10, side="left")
