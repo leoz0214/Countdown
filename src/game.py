@@ -12,6 +12,7 @@ import audio
 from colours import *
 from font import ink_free
 
+TITLE = "Countdown - Game"
 
 NUMBER_COUNT = 7
 MAX_SMALL_COUNT = MAX_BIG_COUNT = 5
@@ -58,7 +59,7 @@ class Game(tk.Frame):
     def __init__(self, root: tk.Tk) -> None:
         super().__init__(root)
         self.root = root
-        self.root.title("Countdown - Game")
+        self.root.title(TITLE)
 
         self.frame = SelectNumbersFrame(self)
         self.frame.pack()

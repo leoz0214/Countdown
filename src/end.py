@@ -3,6 +3,7 @@ import secrets
 
 import menu
 import game
+import data
 from colours import *
 from font import ink_free
 
@@ -64,11 +65,24 @@ class GameEnd(tk.Frame):
             if is_win else get_losing_message())
         self.message_label = tk.Label(
             self, font=ink_free(25), text=message, width=60)
+
+        old_streak = data.get_win_streak()
+        if is_win:
+            data.increment_win_streak()
+        else:
+            data.reset_win_streak()
+        new_streak = data.get_win_streak()
+
+        self.streak_label = tk.Label(
+            self, font=ink_free(25), text="Streak: {} -> {}".format(
+                old_streak, new_streak
+            ))
         
         self.options_frame = GameEndOptionsFrame(self, is_win)
 
         self.title_label.pack(padx=15, pady=10)
         self.message_label.pack(padx=10, pady=10)
+        self.streak_label.pack(padx=10, pady=10)
         self.options_frame.pack(padx=10, pady=10)
     
     def play_again(self) -> None:
