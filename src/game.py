@@ -441,14 +441,12 @@ class CountdownClock(tk.Canvas):
                     (
                         (y_op == "-" and angle > 30) or
                         (y_op == "+" and angle > 150))
-                ): 
-                    self.create_line(x1, y1, x2, y2, fill=WHITE)
-                elif (
+                ) or (
                     max_x == gentle_gradient_max_x and x_op == "+" and
                     (
                         (y_op == "-" and angle > 60) or
                         (y_op == "+" and angle > 120))
-                ):
+                ): 
                     self.create_line(x1, y1, x2, y2, fill=WHITE)
                 else:
                     self.create_line(x1, y1, x2, y2, fill=BLACK)
@@ -707,16 +705,18 @@ class EnterSolutionFrame(tk.Frame):
 
         try:
             is_correct = round(eval(to_evaluate), 10) == self.target
-            if is_correct:
-                CORRECT_SOLUTION_SFX.play()
-                self.master.proceed_to_finish(solution, self.target)
-            else:
-                INCORRECT_SOLUTION_SFX.play()
         except ZeroDivisionError:
             messagebox.showerror(
                 "Cannot divide by 0",
                     "Your solution is invalid because you are trying to "
                     "divide by 0, but this is undefined.")
+            return
+
+        if is_correct:
+            CORRECT_SOLUTION_SFX.play()
+            self.master.proceed_to_finish(solution, self.target)
+        else:
+            INCORRECT_SOLUTION_SFX.play()
         
     def skip(self) -> None:
         """
