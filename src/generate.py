@@ -70,17 +70,38 @@ def add(
             if "*" not in operators:
                 # No point in evaluating only +/- with any parentheses.
                 continue
-            for i, operator in zip(operator_indexes, operators):
-                current[i] = operator
+            # If any parentheses do not change evaluation, skip.
+            opened = False
+            only_multiply = True
+            operator_index = 0
+            for part in current:
+                if part == "(":
+                    opened = True
+                elif opened:
+                    if part == ")":
+                        if only_multiply:
+                            break
+                        opened = False
+                        only_multiply = True
+                    elif not part.isdigit():
+                        if operators[operator_index] in "+-":
+                            only_multiply = False
+                        operator_index += 1
+                elif not part.isdigit():
+                    operator_index += 1
+            else:
+                # All parentheses are needed for clarity.
+                for i, operator in zip(operator_indexes, operators):
+                    current[i] = operator
 
-            expression = "".join(current)
-            result = evaluate(expression)
-            if 201 <= result <= 999:
-                to_add.add(result)
+                expression = "".join(current)
+                result = evaluate(expression)
+                if 201 <= result <= 999:
+                    to_add.add(result)
 
 
 def add_parentheses(
-    to_add: tuple, current: list[int, str],
+    to_add: tuple, current: list[str],
     number_indexes: list[int], operator_indexes: list[int]) -> None:
     """
     Adds required parentheses to an expression.
@@ -150,50 +171,53 @@ def evaluate(expression: str) -> int:
     # Number digits
     number = ""
     i = 0
-    while i < len(expression):
+    multiplying_total = None
+    length = len(expression)
+    while i < length:
         if expression[i].isdigit():
             # Digit
             number += expression[i]
             i += 1
         elif expression[i] == "(":
             # Parentheses evaluation (recursive).
-            r = 1
+            r = 2
             while expression[i + r] != ")":
                 r += 1
-            parts.append(evaluate(expression[i+1:i+r]))
+            result = evaluate(expression[i+1:i+r])
+            if multiplying_total is not None:
+                multiplying_total *= result
+            else:
+                parts.append(result)
             i += r + 1
         else:
             # Operator
             if number:
-                parts.append(int(number))
+                if multiplying_total is not None:
+                    multiplying_total *= int(number)
+                else:
+                    parts.append(int(number))
                 number = ""
-            parts.append(expression[i])
+
+            is_multiplying = expression[i] == "*"
+            if is_multiplying and multiplying_total is None:
+                multiplying_total = parts.pop()
+            elif not is_multiplying:
+                if multiplying_total is not None:
+                    parts.append(multiplying_total)
+                    multiplying_total = None
+                parts.append(expression[i])
             i += 1
     # Last number (if final character not a closing parenthesis).
     if number:
-        parts.append(int(number))
+        if multiplying_total is not None:
+            multiplying_total *= int(number)
+        else:
+            parts.append(int(number))
 
-    # Deal with multiplication first.
-    result = 0
-    while "*" in parts:
-        for i in range(1, len(parts), 2):
-            if parts[i] != "*":
-                continue
+    # Ending multiplying total.
+    if multiplying_total is not None:
+        parts.append(multiplying_total)
 
-            result += parts[i-1] * parts[i+1]
-
-            add = 0
-            # Chained multiplication.
-            while i + add + 3 < len(parts):
-                if parts[i + add + 2] != "*":
-                    break
-                result *= parts[i+add+3]
-                add += 2
-            # Replace multiplied part with its resultant number.
-            parts = parts[:i-1] + [result] + parts[i+add+2:]
-            result = 0
-            break
-    
     # Remaining parts should only be numbers, + and -.
     total = parts[0]
     for i in range(1, len(parts), 2):
