@@ -2,6 +2,7 @@ import tkinter as tk
 from collections import namedtuple
 
 import game
+import data
 from colours import *
 from font import ink_free
 
@@ -25,7 +26,10 @@ class MainMenu(tk.Frame):
         self.title_label = tk.Label(
             self, font=ink_free(100, True), text="Countdown")
         self.level_label_frame = LevelLabelFrame(self, 1, 0)
-        self.win_streak_label = CurrentWinStreakLabel(self, 0)
+        
+        streak = data.get_win_streak()
+        self.win_streak_label = CurrentWinStreakLabel(self, streak)
+        
         self.navigation_frame = MainMenuNavigationFrame(self)
 
         self.title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
