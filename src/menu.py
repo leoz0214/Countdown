@@ -3,6 +3,7 @@ from collections import namedtuple
 
 import game
 import data
+import level
 from colours import *
 from font import ink_free
 
@@ -25,11 +26,11 @@ class MainMenu(tk.Frame):
 
         self.title_label = tk.Label(
             self, font=ink_free(100, True), text="Countdown")
-        self.level_label_frame = LevelLabelFrame(self, 1, 0)
+        self.level_label_frame = level.LevelLabelFrame(self, level.Level())
         
         streak = data.get_win_streak()
         self.win_streak_label = CurrentWinStreakLabel(self, streak)
-        
+
         self.navigation_frame = MainMenuNavigationFrame(self)
 
         self.title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
@@ -44,46 +45,6 @@ class MainMenu(tk.Frame):
         """
         self.destroy()
         game.Game(self.root).pack()
-
-
-class LevelLabelFrame(tk.LabelFrame):
-    """
-    Information about the player's current level and XP.
-    """
-
-    def __init__(
-        self, master: MainMenu, level: int, xp: int | None = None) -> None:
-
-        super().__init__(
-            master, font=ink_free(25), text=f"Level {level}", labelanchor="n")
-
-        if level < 100:
-            self.progress_bar = LevelProgressBar(self, xp / level)
-            self.progress_label = tk.Label(
-                self, font=ink_free(15), text=f"{xp} / {level * 100} XP")
-            
-            self.progress_bar.pack()
-            self.progress_label.pack()
-        else:
-            # Max Level (100)
-            self.max_level_label = tk.Label(
-                self, font=ink_free(20), text="Max Level!", fg=GREEN)        
-            self.max_level_label.pack(padx=25, pady=25)
-        
-
-class LevelProgressBar(tk.Frame):
-    """
-    Visually shows how far the player is into a level.
-    """
-
-    def __init__(self, master: LevelLabelFrame, progress: float) -> None:
-        super().__init__(master)
-
-        green_width = int(progress * 2) # 1 width per 0.5% of progress.
-        self.canvas = tk.Canvas(master, width=200, height=8)
-        self.canvas.create_rectangle(0, 0, green_width, 8, fill=GREEN)
-        self.canvas.create_rectangle(green_width, 0, 200, 8, fill=GREY)
-        self.canvas.pack(padx=25, pady=25)
 
 
 class CurrentWinStreakLabel(tk.Label):
