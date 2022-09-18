@@ -1,6 +1,8 @@
 import itertools
 import secrets
 
+import data
+
 
 def get_too_easy(numbers: list[int]) -> set[int]:
     """
@@ -235,5 +237,11 @@ def generate_number(numbers: list[int]) -> int:
     from 201-999 for the player to try and get.
     """
     # Removes too easy numbers from valid numbers.
-    valid = tuple(get_valid(numbers) - get_too_easy(numbers))
-    return secrets.choice(valid)
+    valid = get_valid(numbers) - get_too_easy(numbers)
+    # Removes recently generated numbers.
+    no_recent = valid - set(data.get_recent_numbers())
+    # If no numbers except recent ones are valid,
+    # select any valid number instead.
+    choice = secrets.choice(tuple(no_recent or valid))
+    data.add_recent_number(choice)
+    return choice

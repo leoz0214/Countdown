@@ -12,11 +12,11 @@ import audio
 from colours import *
 from font import ink_free
 
-TITLE = "Countdown - Game"
 
 NUMBER_COUNT = 7
 MAX_SMALL_COUNT = MAX_BIG_COUNT = 5
 
+SELECT_SFX = audio.get_sfx("select.wav")
 COUNT_SFX = audio.get_sfx("count.wav")
 GO_SFX = audio.get_sfx("go.wav")
 INCORRECT_SOLUTION_SFX = audio.get_sfx("incorrect.mp3")
@@ -59,7 +59,7 @@ class Game(tk.Frame):
     def __init__(self, root: tk.Tk) -> None:
         super().__init__(root)
         self.root = root
-        self.root.title(TITLE)
+        self.root.title("Countdown - Game")
 
         self.frame = SelectNumbersFrame(self)
         self.frame.pack()
@@ -75,6 +75,7 @@ class Game(tk.Frame):
         """
         Starts the game.
         """
+        SELECT_SFX.stop()
         numbers = [
             int(label.cget("text"))
             for label in self.frame.selected_numbers_frame.number_labels]
@@ -136,6 +137,8 @@ class SelectNumbersFrame(tk.Frame):
         self.selected_numbers_frame.number_labels[count].config(
             text=number)
         self.selected_numbers_frame.count += 1
+
+        SELECT_SFX.play()
 
         if self.selected_numbers_frame.count == NUMBER_COUNT:
             # Ready to begin - all numbers selected.
