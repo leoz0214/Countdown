@@ -87,9 +87,9 @@ class Game(tk.Frame):
         """
         Ends the round, leading the player to enter a solution.
         """
+        COUNTDOWN_MUSIC.stop()
         numbers = self.frame.numbers
         target = self.frame.target
-        COUNTDOWN_MUSIC.stop()
         self.frame.destroy()
         self.frame = EnterSolutionFrame(self, numbers, target)
         self.frame.pack()
@@ -181,7 +181,7 @@ class SmallNumbersFrame(tk.Frame):
         super().__init__(master)
         self.master = master
 
-        possible = list(range(1, 10))
+        possible = list(range(2, 10))
         self.numbers = []
 
         for _ in range(MAX_SMALL_COUNT):
@@ -568,13 +568,13 @@ class EnterSolutionFrame(tk.Frame):
         for number in self.used_numbers:
             for button in self.solution_buttons:
                 # Disables used numbers in grey instead of red.
-                if (
-                    button.cget("text") == number
-                    and (
+                if button.cget("text") == number:
+                    if (
                         button.cget("disabledforeground") != GREY
-                        or button.cget("state") == "normal")
-                ):
-                    button.config(state="disabled", disabledforeground=GREY)
+                        or button.cget("state") == "normal"
+                    ):
+                        button.config(
+                            state="disabled", disabledforeground=GREY)
                     break
         
         # Disable all except closing parenthesis or remove last input.

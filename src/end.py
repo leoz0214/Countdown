@@ -5,6 +5,7 @@ import menu
 import game
 import data
 import level
+import audio
 from colours import *
 from font import ink_free
 
@@ -37,9 +38,17 @@ NUMBERS_USED_XP_MULTIPLIER = {
 STREAK_XP_MULTIPLIER = {
     2: 1.1,
     5: 1.15,
-    21: 1.2,
-    78: 1.3
+    10: 1.2,
+    15: 1.25,
+    20: 1.3,
+    25: 1.35,
+    50: 1.5
 }
+
+ADD_XP_CHUNK_COUNT = 50
+ADD_XP_DELAY_MS = 40
+
+LEVEL_UP_SFX = audio.get_sfx("levelup.wav")
 
 
 def get_winning_message(solution: str, target: int) -> str:
@@ -102,6 +111,7 @@ class GameEnd(tk.Frame):
         xp_earned = 25 # Just for playing
         xp_sources = ["Completed a round (+25XP)"]
         level_before = level.Level().level
+        total_xp_before = data.get_total_xp()
         if is_win:
             xp_earned += 100 # Solution XP
             xp_sources.append("Solution (+100XP)")
@@ -157,11 +167,10 @@ class GameEnd(tk.Frame):
             
             xp_earned = int(round(xp_earned, 10))
         
-        data.add_total_xp(xp_earned)
-        level_after = level.Level().level
+        self.new_total_xp = total_xp_before + xp_earned
 
         self.xp_frame = GameEndXpFrame(
-            self, xp_sources, xp_earned, level_before, level_after)
+            self, xp_sources, xp_earned, level_before)
         
         self.options_frame = GameEndOptionsFrame(self, is_win)
 
@@ -171,20 +180,31 @@ class GameEnd(tk.Frame):
         self.xp_frame.pack(padx=10, pady=5)
         self.options_frame.pack(padx=10, pady=10)
     
+    def exit(self) -> None:
+        """
+        Exits the game over screen.
+        """
+        LEVEL_UP_SFX.stop()
+        self.destroy()
+        # In case animated XP gain is not finished.
+        current_total_xp = data.get_total_xp()
+        if current_total_xp < self.new_total_xp:
+            data.add_total_xp(self.new_total_xp - current_total_xp)
+    
     def play_again(self) -> None:
         """
         Allows the player to start another round.
         """
-        self.destroy()
+        self.exit()
         game.Game(self.root).pack()
     
     def home(self) -> None:
         """
         Return to the main menu.
         """
-        self.destroy()
+        self.exit()
         menu.MainMenu(self.root).pack()
-
+    
 
 class GameEndXpFrame(tk.Frame):
     """
@@ -195,9 +215,10 @@ class GameEndXpFrame(tk.Frame):
 
     def __init__(
         self, master: GameEnd, sources: list[str], earned: int,
-        level_before: int, level_after: int) -> None:
+        level_before: int) -> None:
 
         super().__init__(master)
+        self.level_before = level_before
         self.title = tk.Label(self, font=ink_free(25, True), text="XP/Level")
 
         self.xp_sources_listbox = tk.Listbox(
@@ -207,22 +228,44 @@ class GameEndXpFrame(tk.Frame):
         
         self.earned_label = tk.Label(
             self, font=ink_free(20), text=f"Total: {earned}XP")
-        
+
         self.level_data_frame = level.LevelLabelFrame(self, level.Level())
-        if level_after > level_before:
-            self.level_change_label = tk.Label(
-                self, font=ink_free(20), text="Level Up! ({} -> {})".format(
-                    level_before, level_after
-                ), fg=GREEN)
-        else:
-            self.level_change_label = tk.Label(
-                self, font=ink_free(20), text="No level change")
         
         self.title.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
         self.xp_sources_listbox.grid(row=1, column=0, padx=5)
         self.earned_label.grid(row=2, column=0, padx=5)
         self.level_data_frame.grid(row=1, column=1, padx=5)
-        self.level_change_label.grid(row=2, column=1, padx=5)
+
+        self.add_xp_in_chunks(earned, ADD_XP_CHUNK_COUNT)
+    
+    def add_xp_in_chunks(
+        self, xp_remaining: int, chunks_remaining: int) -> None:
+        """
+        Animates XP gain by adding it over a set period of time
+        rather than instantly.
+        """
+        if not xp_remaining:
+            final = level.Level()
+            if final.level > self.level_before:
+                LEVEL_UP_SFX.play()
+                self.level_change_label = tk.Label(
+                    self, font=ink_free(20),
+                    text="Level Up! ({} -> {})".format(
+                        self.level_before, final.level
+                    ), fg=GREEN)
+            else:
+                self.level_change_label = tk.Label(
+                    self, font=ink_free(20), text="No change")
+            self.level_change_label.grid(row=2, column=1, padx=5)
+            return
+
+        xp_to_add = xp_remaining // chunks_remaining
+        if xp_to_add:
+            data.add_total_xp(xp_to_add)
+            self.level_data_frame.update(level.Level())
+
+        self.after(ADD_XP_DELAY_MS, lambda: self.add_xp_in_chunks(
+            xp_remaining - xp_to_add, chunks_remaining - 1))
 
 
 class GameEndOptionsFrame(tk.Frame):

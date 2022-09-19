@@ -4,6 +4,7 @@ import os
 
 import menu
 import game
+import end
 import data
 from colours import *
 
@@ -48,6 +49,8 @@ def close_window(root: tk.Tk) -> None:
         ):
             return
         data.reset_win_streak()
+    elif isinstance(frame, end.GameEnd):
+        frame.exit()
 
     quit()
 
