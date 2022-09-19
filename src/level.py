@@ -58,7 +58,7 @@ class LevelLabelFrame(tk.LabelFrame):
             self.progress_bar = LevelProgressBar(
                 self, self.data.xp / self.data.required * 100)
             self.progress_label = tk.Label(
-                self, font=ink_free(15),
+                self, font=ink_free(15), width=15,
                 text=f"{self.data.xp} / {self.data.required} XP")
             
             self.progress_bar.pack()
@@ -100,8 +100,12 @@ class LevelProgressBar(tk.Frame):
 
     def __init__(self, master: LevelLabelFrame, progress: float) -> None:
         super().__init__(master)
-
-        green_width = int(progress * 2) # 1 width per 0.5% of progress.
+        self.create(int(progress * 2))
+    
+    def create(self, green_width: int) -> None:
+        """
+        Creates the canvas which represents the progress bar.
+        """
         self.canvas = tk.Canvas(self, width=200, height=8)
         self.canvas.create_rectangle(0, 0, green_width, 8, fill=GREEN)
         self.canvas.create_rectangle(green_width, 0, 200, 8, fill=GREY)
@@ -111,9 +115,5 @@ class LevelProgressBar(tk.Frame):
         """
         Changes the amount of level progress displayed.
         """
-        green_width = int(new_progress * 2)
         self.canvas.destroy()
-        self.canvas = tk.Canvas(self, width=200, height=8)
-        self.canvas.create_rectangle(0, 0, green_width, 8, fill=GREEN)
-        self.canvas.create_rectangle(green_width, 0, 200, 8, fill=GREY)
-        self.canvas.pack(padx=25, pady=25)
+        self.create(int(new_progress * 2))
