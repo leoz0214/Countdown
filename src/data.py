@@ -21,7 +21,10 @@ def get_win_streak() -> int:
     
     try:
         with open(STREAK_FILE, "rb") as f:
-            return int(f.read())
+            streak = int(f.read())
+            if streak < 0:
+                raise ValueError
+            return streak
     except ValueError:
         # File is corrupt.
         with open(STREAK_FILE, "wb") as f:
@@ -57,7 +60,10 @@ def get_total_xp() -> int:
     
     try:
         with open(XP_FILE, "rb") as f:
-            return int(f.read())
+            xp = int(f.read())
+            if xp < 0:
+                raise ValueError
+            return xp
     except ValueError:
         # File is corrupt.
         with open(XP_FILE, "wb") as f:
