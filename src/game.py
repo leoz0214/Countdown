@@ -565,14 +565,19 @@ class EnterSolutionFrame(tk.Frame):
         if to_add.isdigit() and not from_pop:
             self.used_numbers.append(to_add)
         
+        affected_buttons = []
         for number in self.used_numbers:
             for button in self.solution_buttons:
                 # Disables used numbers in grey instead of red.
-                if button.cget("text") == number:
+                if (
+                    button.cget("text") == number
+                    and button not in affected_buttons
+                ):
                     if (
                         button.cget("disabledforeground") != GREY
                         or button.cget("state") == "normal"
                     ):
+                        affected_buttons.append(button)
                         button.config(
                             state="disabled", disabledforeground=GREY)
                     break
