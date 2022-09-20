@@ -30,6 +30,55 @@ def get_valid(numbers: list[int]) -> set[int]:
     return valid
 
 
+def get_starting_positions(numbers: list[int]) -> tuple[list]:
+    """
+    Gets starting number and operator indexes, along with the
+    initial parts of the expression when no parentheses have been added.
+    """
+    start_number_indexes = list(range(0, (len(numbers) + 1) * 2, 2))
+    start_operator_indexes = list(range(1, len(numbers) * 2, 2))
+    start = []
+    for number in numbers[:-1]:
+        start.append(str(number))
+        # Placeholder for an operator.
+        start.append("")
+    start.append(str(numbers[-1]))
+    return start, start_number_indexes, start_operator_indexes
+
+
+def check_to_evaluate(
+    numbers: list[int], operators: tuple[str], parts: list[str]) -> bool:
+    """
+    Checks if there is any need to evaluate an expression
+    with parentheses:
+    - There is multiplication or division
+    - Any of the parentheses change evaluation
+    """
+    if "*" not in operators:
+        # No point in evaluating only +/- with any parentheses.
+        return False
+    # If any parentheses do not change evaluation, skip.
+    opened = False
+    only_multiply = True
+    operator_index = 0
+    for part in parts:
+        if part == "(":
+            opened = True
+        elif opened:
+            if part == ")":
+                if only_multiply:
+                    return False
+                opened = False
+                only_multiply = True
+            elif not part.isdigit():
+                if operators[operator_index] in "+-":
+                    only_multiply = False
+                operator_index += 1
+        elif not part.isdigit():
+            operator_index += 1
+    return True
+
+
 def add(
     numbers: list[int], parentheses_positions: list[tuple],
     to_add: set[int]) -> None:
@@ -37,20 +86,10 @@ def add(
     Evaluates numbers using all possible operator positions
     (Cartesian product), and adds then to a particular set.
     """
-    number_count = len(numbers)
-    # Initial indexes for numbers/operators when no parentheses
-    # have been added yet.
-    start_number_indexes = list(range(0, (number_count + 1) * 2, 2))
-    start_operator_indexes = list(range(1, number_count * 2, 2))
-    # Initial parts of expression when no parentheses have been added.
-    start = []
-    for number in numbers[:-1]:
-        start.append(str(number))
-        # Placeholder for an operator.
-        start.append("")
-    start.append(str(numbers[-1]))
+    start, start_number_indexes, start_operator_indexes = (
+        get_starting_positions(numbers))
 
-    for operators in itertools.product("+-*", repeat=number_count - 1):
+    for operators in itertools.product("+-*", repeat=len(numbers) - 1):
         for i, operator in zip(start_operator_indexes, operators):
             start[i] = operator
         
@@ -68,31 +107,8 @@ def add(
 
         for p in positions:
             add_parentheses(p, current, number_indexes, operator_indexes)
-        for operators in itertools.product("+-*", repeat=number_count - 1):
-            if "*" not in operators:
-                # No point in evaluating only +/- with any parentheses.
-                continue
-            # If any parentheses do not change evaluation, skip.
-            opened = False
-            only_multiply = True
-            operator_index = 0
-            for part in current:
-                if part == "(":
-                    opened = True
-                elif opened:
-                    if part == ")":
-                        if only_multiply:
-                            break
-                        opened = False
-                        only_multiply = True
-                    elif not part.isdigit():
-                        if operators[operator_index] in "+-":
-                            only_multiply = False
-                        operator_index += 1
-                elif not part.isdigit():
-                    operator_index += 1
-            else:
-                # All parentheses are needed for clarity.
+        for operators in itertools.product("+-*", repeat=len(numbers) - 1):
+            if check_to_evaluate(numbers, operators, current):
                 for i, operator in zip(operator_indexes, operators):
                     current[i] = operator
 
@@ -149,8 +165,8 @@ def generate_parentheses_positions(number_count: int) -> list[tuple]:
                 positions.append([(i, i + size), (i + size, number_count)])
                 # Multiple parentheses in one expression is possible.
                 for pos in generate_parentheses_positions(
-                    number_count - (i + size)):
-
+                    number_count - (i + size)
+                ):
                     new = [(i, i + size)]
                     for p in pos:
                         new.append((p[0] + i + size, p[1] + i + size))
