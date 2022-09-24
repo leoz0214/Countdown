@@ -1,7 +1,35 @@
 import itertools
 import secrets
+import os
+from ctypes import cdll, c_double
+from timeit import default_timer as timer
 
 import data
+
+
+evallib = cdll.LoadLibrary(
+    os.path.dirname(os.path.abspath(__file__)) +"/eval.so")
+evallib.eval.restype = c_double
+
+
+class SolutionGenerationSettings:
+    """
+    Holds the settings of what types of solutions are generated
+    and the maximum time limit allocated.
+    """
+
+    def __init__(
+        self, min_number_count: int, max_number_count: int,
+        max_solution_count: int, nested_parentheses: bool | None,
+        operators: str, seconds_limit: int) -> None:
+
+        self.min_number_count = min_number_count
+        self.max_number_count = max_number_count
+        self.max_solution_count = max_solution_count
+        self.parentheses = nested_parentheses is not None
+        self.nested_parentheses = bool(nested_parentheses)
+        self.operators = operators
+        self.seconds_limit = seconds_limit
 
 
 def get_too_easy(numbers: list[int]) -> set[int]:
@@ -24,8 +52,8 @@ def get_valid(numbers: list[int]) -> set[int]:
     Humans are not computers so some leeway must be allowed.
     """
     valid = set()
-    parentheses_positions = generate_parentheses_positions(4)
-    for perm in itertools.permutations(numbers, 4):
+    parentheses_positions = generate_parentheses_positions(7, 1)
+    for perm in itertools.permutations(numbers, 7):
         add(perm, parentheses_positions, valid)
     return valid
 
@@ -46,36 +74,61 @@ def get_starting_positions(numbers: list[int]) -> tuple[list]:
     return start, start_number_indexes, start_operator_indexes
 
 
-def check_to_evaluate(
-    numbers: list[int], operators: tuple[str], parts: list[str]) -> bool:
+def check_to_evaluate(operators: tuple[str], parts: list[str]) -> bool:
     """
     Checks if there is any need to evaluate an expression
-    with parentheses:
-    - There is multiplication or division
-    - Any of the parentheses change evaluation
+    with parentheses, as evaluation is expensive in terms of time
+    and duplicate solutions are unwanted, so:
+    - There is multiplication or division; and
+    - All of the parentheses change evaluation
+
+    Especially important for a large number of expression parts.
     """
-    if "*" not in operators:
+    if "*" not in operators and "/" not in operators:
         # No point in evaluating only +/- with any parentheses.
         return False
+    elif "+" not in operators and "-" not in operators:
+        # No point in evaluating only x or / with any parentheses.
+        return False
     # If any parentheses do not change evaluation, skip.
-    opened = False
-    only_multiply = True
+    opened = 0
+    has_add_or_subtract = []
+    # If "+/-" both before and after parentheses expression,
+    # the parentheses are obviously not needed, so return False.
+    # E.g. 1 * ((2 + 3) + 4) is False as the parentheses around
+    # 2 + 3 are unnecessary.
+    # Also if ( or nothing is before the target ( and
+    # ) is followed by +/-, False is still returned, and vice versa.
+    before_opening_parenthesis = []
     operator_index = 0
-    for part in parts:
+    parts_count = len(parts)
+    for i, part in enumerate(parts):
         if part == "(":
-            opened = True
+            # New set of parentheses opened.
+            opened += 1
+            # Assume otherwise until confirmed
+            has_add_or_subtract.append(False)
+            before_opening_parenthesis.append(
+                not i or parts[i-1] == "("
+                or operators[operator_index-1] in "+-")
         elif opened:
             if part == ")":
-                if only_multiply:
+                if not has_add_or_subtract.pop():
                     return False
-                opened = False
-                only_multiply = True
+                elif before_opening_parenthesis.pop() and (
+                    i + 1 >= parts_count or parts[i+1] == ")"
+                    or operators[operator_index] in "+-"
+                ):
+                    return False
+                opened -= 1
             elif not part.isdigit():
                 if operators[operator_index] in "+-":
-                    only_multiply = False
+                    has_add_or_subtract[-1] = True
                 operator_index += 1
         elif not part.isdigit():
+            # Increment to next operator.
             operator_index += 1
+
     return True
 
 
@@ -92,37 +145,45 @@ def add(
     for operators in itertools.product("+-*", repeat=len(numbers) - 1):
         for i, operator in zip(start_operator_indexes, operators):
             start[i] = operator
-        
-        expression = "".join(start)
-        result = evaluate(expression)
-        if 201 <= result <= 999:
-            to_add.add(result)
+        check_to_add(start, to_add)
 
     for positions in parentheses_positions:
-        # Copy of original expression/indexes required for each change
-        # in parentheses positions.
         current = [*start]
         number_indexes = [*start_number_indexes]
         operator_indexes = [*start_operator_indexes]
 
         for p in positions:
-            add_parentheses(p, current, number_indexes, operator_indexes)
-        for operators in itertools.product("+-*", repeat=len(numbers) - 1):
-            if check_to_evaluate(numbers, operators, current):
-                for i, operator in zip(operator_indexes, operators):
-                    current[i] = operator
+            result = add_parentheses(
+                p, current, number_indexes, operator_indexes, len(numbers))
+            if result:
+                to_add |= result
 
-                expression = "".join(current)
-                result = evaluate(expression)
-                if 201 <= result <= 999:
-                    to_add.add(result)
+        for operators in itertools.product("+-*", repeat=len(numbers) - 1):
+            if not check_to_evaluate(operators, current):
+                continue
+            for i, operator in zip(operator_indexes, operators):
+                current[i] = operator
+            check_to_add(current, to_add)
+
+
+def check_to_add(parts: list[str], to_add: set[int]):
+    """
+    Joins parts of an expression and evalutes it.
+    If the result is within the possible target number range, add.
+    """
+    expression = "".join(parts)
+    result = evaluate(expression)
+    if 201 <= result <= 999:
+        to_add.add(result)
 
 
 def add_parentheses(
     to_add: tuple, current: list[str],
-    number_indexes: list[int], operator_indexes: list[int]) -> None:
+    number_indexes: list[int], operator_indexes: list[int],
+    number_count: int) -> None:
     """
     Adds required parentheses to an expression.
+    Handles nested parentheses recursively.
     """
     start = to_add[0]
     stop = to_add[1]
@@ -142,20 +203,46 @@ def add_parentheses(
         number_indexes[i] += 1
     for i in range(stop - 1, len(operator_indexes)):
         operator_indexes[i] += 1
+    
+    if len(to_add) == 3:
+        # Nested parentheses
+        numbers = set()
+        for positions in to_add[2]:
+            deeper_current = [*current]
+            deeper_number_indexes = [*number_indexes]
+            deeper_operator_indexes = [*operator_indexes]
+
+            for p in positions:
+                add = (p[0] + start, p[1] + start)
+                if len(p) == 3:
+                    add = (p[0] + start, p[1] + start, p[2])
+                result = add_parentheses(
+                    add, deeper_current, deeper_number_indexes,
+                    deeper_operator_indexes, number_count)
+                if result:
+                    numbers |= result
+
+            for operators in itertools.product(
+                "+-*", repeat=number_count - 1
+            ):
+                if not check_to_evaluate(operators, deeper_current):
+                    continue
+                for i, operator in zip(deeper_operator_indexes, operators):
+                    deeper_current[i] = operator
+                check_to_add(deeper_current, numbers)
+        return numbers
 
 
-def generate_parentheses_positions(number_count: int) -> list[tuple]:
+def generate_parentheses_positions(
+    number_count: int, nested: bool = False) -> list[tuple]:
     """
     Gets simple possible parentheses positions for n numbers.
-    This is in the form of a list of lists of 2-tuples, with
+    This is in the form of a list of lists of 2 or 3-tuples, with
     the 1st number indicating the position of the opening parenthesis,
     and the latter indicating the position of the closing parenthesis.
-    Not recursive, so no nested parentheses.
+    If a tuple is of length 3, the third element contains nested
+    parentheses.
     """
-    if number_count < 3:
-        # No possible ambiguity with order of operations.
-        return []
-    
     positions = []
     for size in range(number_count - 1, 1, -1):
         # size = number of numbers in parentheses
@@ -165,86 +252,42 @@ def generate_parentheses_positions(number_count: int) -> list[tuple]:
                 positions.append([(i, i + size), (i + size, number_count)])
                 # Multiple parentheses in one expression is possible.
                 for pos in generate_parentheses_positions(
-                    number_count - (i + size)
+                    number_count - (i + size), nested
                 ):
                     new = [(i, i + size)]
                     for p in pos:
                         new.append((p[0] + i + size, p[1] + i + size))
                     positions.append(new)
+    
+    if nested:
+        for i, combination in tuple(enumerate(positions)):
+            # Using pre-computed length iteration to allow for appended
+            # recursive parentheses positions.
+            new_combo = []
+            for j in range(len(combination)):
+                p = combination[j]
+                if p[1] - p[0] >= 3:
+                    new = (
+                        p[0], p[1],
+                        generate_parentheses_positions(p[1] - p[0], True))
+                    new_combo.append(new)
+            if new_combo:
+                positions.append(new_combo)
 
     return positions
 
 
 def evaluate(expression: str) -> int:
     """
-    Evaluates a simple maths expression with only +/-/*/().
-    BIDMAS followed (but no indices and divsion).
-    No nested parentheses also.
-    A good bit faster than the built in eval(), and also safer!
-    """
-    # Parts consist of numbers and operators
-    # Even indexes = numbers, odd indexes = operators.
-    # Parentheses never included, they are evaluated beforehand.
-    parts = []
-    # Number digits
-    number = ""
-    i = 0
-    multiplying_total = None
-    length = len(expression)
-    while i < length:
-        if expression[i].isdigit():
-            # Digit
-            number += expression[i]
-            i += 1
-        elif expression[i] == "(":
-            # Parentheses evaluation (recursive).
-            r = 2
-            while expression[i + r] != ")":
-                r += 1
-            result = evaluate(expression[i+1:i+r])
-            if multiplying_total is not None:
-                multiplying_total *= result
-            else:
-                parts.append(result)
-            i += r + 1
-        else:
-            # Operator
-            if number:
-                if multiplying_total is not None:
-                    multiplying_total *= int(number)
-                else:
-                    parts.append(int(number))
-                number = ""
-
-            is_multiplying = expression[i] == "*"
-            if is_multiplying and multiplying_total is None:
-                multiplying_total = parts.pop()
-            elif not is_multiplying:
-                if multiplying_total is not None:
-                    parts.append(multiplying_total)
-                    multiplying_total = None
-                parts.append(expression[i])
-            i += 1
-    # Last number (if final character not a closing parenthesis).
-    if number:
-        if multiplying_total is not None:
-            multiplying_total *= int(number)
-        else:
-            parts.append(int(number))
-
-    # Ending multiplying total.
-    if multiplying_total is not None:
-        parts.append(multiplying_total)
-
-    # Remaining parts should only be numbers, + and -.
-    total = parts[0]
-    for i in range(1, len(parts), 2):
-        if parts[i] == "+":
-            total += parts[i+1]
-        else:
-            total -= parts[i+1]
+    Evaluates a simple maths expression with only +/-/*/'/'/().
+    Order of operations followed.
     
-    return total
+    Calls fast corresponding function written in C++
+    """
+    result = evallib.eval(expression.encode(), 0, -1)
+    if "/" in expression:
+        result = round(result, 8)
+    return int(result) if result.is_integer() else result
 
 
 def generate_number(numbers: list[int]) -> int:
@@ -261,3 +304,13 @@ def generate_number(numbers: list[int]) -> int:
     choice = secrets.choice(tuple(no_recent or valid))
     data.add_recent_number(choice)
     return choice
+
+
+def generate_solutions(
+    numbers: list[int], target: int, settings: SolutionGenerationSettings
+) -> list[str]:
+    """
+    Gets solutions for a given target number with particular smaller
+    numbers based on certain settings.
+    """
+    pass
