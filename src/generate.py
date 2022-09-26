@@ -1,6 +1,7 @@
 import itertools
 import secrets
 import os
+from typing import Literal
 from ctypes import cdll, c_double
 from timeit import default_timer as timer
 
@@ -52,8 +53,8 @@ def get_valid(numbers: list[int]) -> set[int]:
     Humans are not computers so some leeway must be allowed.
     """
     valid = set()
-    parentheses_positions = generate_parentheses_positions(7, 1)
-    for perm in itertools.permutations(numbers, 7):
+    parentheses_positions = generate_parentheses_positions(4)
+    for perm in itertools.permutations(numbers, 4):
         add(perm, parentheses_positions, valid)
     return valid
 
@@ -113,6 +114,7 @@ def check_to_evaluate(operators: tuple[str], parts: list[str]) -> bool:
                 or operators[operator_index-1] in "+-")
         elif opened:
             if part == ")":
+                # Parentheses are closing
                 if not has_add_or_subtract.pop():
                     return False
                 elif before_opening_parenthesis.pop() and (
@@ -133,7 +135,7 @@ def check_to_evaluate(operators: tuple[str], parts: list[str]) -> bool:
 
 
 def add(
-    numbers: list[int], parentheses_positions: list[tuple],
+    numbers: list[int], parentheses_positions: list[list],
     to_add: set[int]) -> None:
     """
     Evaluates numbers using all possible operator positions
@@ -142,7 +144,10 @@ def add(
     start, start_number_indexes, start_operator_indexes = (
         get_starting_positions(numbers))
 
-    for operators in itertools.product("+-*", repeat=len(numbers) - 1):
+    operators_product = tuple(
+        itertools.product("+-*", repeat=len(numbers) - 1))
+
+    for operators in operators_product:
         for i, operator in zip(start_operator_indexes, operators):
             start[i] = operator
         check_to_add(start, to_add)
@@ -154,11 +159,12 @@ def add(
 
         for p in positions:
             result = add_parentheses(
-                p, current, number_indexes, operator_indexes, len(numbers))
+                p, current, number_indexes, operator_indexes, len(numbers),
+                operators_product=operators_product)
             if result:
                 to_add |= result
 
-        for operators in itertools.product("+-*", repeat=len(numbers) - 1):
+        for operators in operators_product:
             if not check_to_evaluate(operators, current):
                 continue
             for i, operator in zip(operator_indexes, operators):
@@ -166,7 +172,7 @@ def add(
             check_to_add(current, to_add)
 
 
-def check_to_add(parts: list[str], to_add: set[int]):
+def check_to_add(parts: list[str], to_add: set[int]) -> None:
     """
     Joins parts of an expression and evalutes it.
     If the result is within the possible target number range, add.
@@ -177,10 +183,64 @@ def check_to_add(parts: list[str], to_add: set[int]):
         to_add.add(result)
 
 
+def get_solution(
+    numbers: list[int], target: int,
+    parentheses_positions: list[list[tuple]], allowed_operators: str,
+    seconds_start: float, seconds_limit: int) -> str | None:
+    """
+    Attempts to find a solution for given numbers
+    in that particular order along with the target number,
+    parentheses positions and operators which can be used.
+    """
+    start, start_number_indexes, start_operator_indexes = (
+        get_starting_positions(numbers))
+    
+    # Further randomisation - start from a random product of operators.
+    operators_product = tuple(itertools.product(
+        allowed_operators, repeat=len(numbers) - 1))
+    shift = secrets.choice(range(0, len(operators_product)))
+    operators_product = operators_product[shift:] + operators_product[:shift]
+    
+    for operators in operators_product:
+        if timer() - seconds_start > seconds_limit:
+            return
+        for i, operator in zip(start_operator_indexes, operators):
+            start[i] = operator
+        expression = "".join(start)
+        if evaluate(expression) == target:
+            return expression
+
+    for positions in parentheses_positions:
+        current = [*start]
+        number_indexes = [*start_number_indexes]
+        operator_indexes = [*start_operator_indexes]
+
+        for p in positions:
+            if timer() - seconds_start > seconds_limit:
+                return
+            result = add_parentheses(
+                p, current, number_indexes, operator_indexes, len(numbers),
+                "target", target, operators_product)
+            if result:
+                return result
+
+        for operators in operators_product:
+            if not check_to_evaluate(operators, current):
+                continue
+            for i, operator in zip(operator_indexes, operators):
+                current[i] = operator
+            expression = "".join(current)
+            if evaluate(expression) == target:
+                return expression
+
+
 def add_parentheses(
     to_add: tuple, current: list[str],
     number_indexes: list[int], operator_indexes: list[int],
-    number_count: int) -> None:
+    number_count: int,
+    mode: Literal["possible", "target"] = "possible",
+    target: int | None = None,
+    operators_product: tuple[tuple] | None = None) -> set[int] | str | None:
     """
     Adds required parentheses to an expression.
     Handles nested parentheses recursively.
@@ -206,7 +266,9 @@ def add_parentheses(
     
     if len(to_add) == 3:
         # Nested parentheses
-        numbers = set()
+        if mode == "possible":
+            numbers = set()
+
         for positions in to_add[2]:
             deeper_current = [*current]
             deeper_number_indexes = [*number_indexes]
@@ -216,25 +278,38 @@ def add_parentheses(
                 add = (p[0] + start, p[1] + start)
                 if len(p) == 3:
                     add = (p[0] + start, p[1] + start, p[2])
+
                 result = add_parentheses(
                     add, deeper_current, deeper_number_indexes,
-                    deeper_operator_indexes, number_count)
+                    deeper_operator_indexes, number_count, mode,
+                    target, operators_product)
                 if result:
-                    numbers |= result
+                    if mode == "possible":
+                        numbers |= result
+                    else:
+                        return result
 
-            for operators in itertools.product(
-                "+-*", repeat=number_count - 1
-            ):
+            for operators in (operators_product or itertools.product(
+                "+-*/", repeat=number_count - 1
+            )):
                 if not check_to_evaluate(operators, deeper_current):
                     continue
                 for i, operator in zip(deeper_operator_indexes, operators):
                     deeper_current[i] = operator
-                check_to_add(deeper_current, numbers)
-        return numbers
+
+                if mode == "possible":
+                    check_to_add(deeper_current, numbers)
+                else:
+                    expression = "".join(deeper_current)
+                    if evaluate(expression) == target:
+                        return expression
+
+        if mode == "possible":
+            return numbers
 
 
 def generate_parentheses_positions(
-    number_count: int, nested: bool = False) -> list[tuple]:
+    number_count: int, nested: bool = False) -> list[list[tuple]]:
     """
     Gets simple possible parentheses positions for n numbers.
     This is in the form of a list of lists of 2 or 3-tuples, with
@@ -277,7 +352,7 @@ def generate_parentheses_positions(
     return positions
 
 
-def evaluate(expression: str) -> int:
+def evaluate(expression: str) -> int | float:
     """
     Evaluates a simple maths expression with only +/-/*/'/'/().
     Order of operations followed.
@@ -286,8 +361,9 @@ def evaluate(expression: str) -> int:
     """
     result = evallib.eval(expression.encode(), 0, -1)
     if "/" in expression:
-        result = round(result, 8)
-    return int(result) if result.is_integer() else result
+        result = round(result, 10)
+        return int(result) if result.is_integer() else result
+    return result
 
 
 def generate_number(numbers: list[int]) -> int:
@@ -307,10 +383,42 @@ def generate_number(numbers: list[int]) -> int:
 
 
 def generate_solutions(
-    numbers: list[int], target: int, settings: SolutionGenerationSettings
-) -> list[str]:
+    numbers: list[int], target: int,
+    settings: SolutionGenerationSettings) -> list[str]:
     """
     Gets solutions for a given target number with particular smaller
     numbers based on certain settings.
     """
-    pass
+    start = timer()
+    solutions = []
+    parentheses_positions = {
+        count: generate_parentheses_positions(
+            count, settings.nested_parentheses)
+            if settings.parentheses else []
+        for count in range(
+            settings.min_number_count, settings.max_number_count + 1)
+    }
+    # Uniform probability for n numbers.
+    perms = [
+        list(itertools.permutations(numbers, count))
+        for count in range(
+            settings.min_number_count, settings.max_number_count + 1)]
+    
+    while (
+        timer() - start < settings.seconds_limit
+        and perms and len(solutions) < settings.max_solution_count
+    ):
+        count_choice = secrets.choice(perms)
+        choice = secrets.choice(count_choice)
+        perms[perms.index(count_choice)].remove(choice)
+
+        while [] in perms:
+            perms.remove([])
+
+        result = get_solution(
+            choice, target, parentheses_positions[len(choice)],
+            settings.operators, start, settings.seconds_limit)
+        if result is not None:
+            solutions.append(result)
+    
+    return solutions
