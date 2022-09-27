@@ -363,7 +363,7 @@ def evaluate(expression: str) -> int | float:
     if "/" in expression:
         result = round(result, 10)
         return int(result) if result.is_integer() else result
-    return result
+    return int(result)
 
 
 def generate_number(numbers: list[int]) -> int:
@@ -419,6 +419,7 @@ def generate_solutions(
             choice, target, parentheses_positions[len(choice)],
             settings.operators, start, settings.seconds_limit)
         if result is not None:
+            result = result.replace("*", "x").replace("/", "÷")
             solutions.append(result)
     
     return solutions
