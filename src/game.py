@@ -94,20 +94,21 @@ class Game(tk.Frame):
         self.frame = EnterSolutionFrame(self, numbers, target)
         self.frame.pack()
     
-    def proceed_to_finish(self, solution: str | None, target: int) -> None:
+    def proceed_to_finish(
+        self, solution: str | None, numbers: list[int], target: int) -> None:
         """
         After solution entry (if any), proceed to finish.
         """
         self.destroy()
         self.root.unbind("<Key>")
-        end.GameEnd(self.root, solution, target).pack()
+        end.GameEnd(self.root, solution, numbers, target).pack()
 
 
 class SelectNumbersFrame(tk.Frame):
     """
     Allows the play to select numbers to be used, either:
     - Big (25, 50, 75, 100)
-    - Small (1-9)
+    - Small (2-9)
 
     Minimum two of each, total 7.
     """
@@ -190,7 +191,7 @@ class SmallNumbersFrame(tk.Frame):
             possible.remove(selected)
         
         self.info_label = tk.Label(
-            self, font=ink_free(25, True), text="Small numbers (1-9):",
+            self, font=ink_free(25, True), text="Small numbers (2-9):",
             justify="left")
         
         self.buttons = [
@@ -322,16 +323,13 @@ class CountdownFrame(tk.Frame):
         GO_SFX.stop()
         self.target = generate.generate_number(self.numbers)
 
-        self.target_number_label = TargetNumberLabel(self, self.target)
+        self.target_number_label = TargetNumberLabel(self, self.target, True)
         self.selected_numbers_frame = SelectedNumbersFrame(self, self.numbers)
         self.countdown_clock = CountdownClock(self)
 
         self.target_number_label.pack(padx=25, pady=15)
         self.selected_numbers_frame.pack(padx=10, pady=10)
         self.countdown_clock.pack(padx=10, pady=10)
-
-        self.target_number_label.shuffle_number_display(
-            SHUFFLES_BEFORE_REAL_NUMBER)
     
     def count_down(self, first: bool = False) -> None:
         """
@@ -356,12 +354,18 @@ class TargetNumberLabel(tk.Label):
     Holds the number the player must try and get.
     """
 
-    def __init__(self, master: CountdownFrame, number: int) -> None:
+    def __init__(
+        self, master: tk.Frame, number: int, shuffle: bool = False) -> None:
+
         super().__init__(
             master, font=ink_free(100, True), width=4, bg=GREEN,
             highlightbackground=BLACK, highlightthickness=5)
         self.master = master
         self.number = number
+        if shuffle:
+            self.shuffle_number_display(SHUFFLES_BEFORE_REAL_NUMBER)
+        else:
+            self.config(text=number)
     
     def shuffle_number_display(self, count: int) -> None:
         """
@@ -723,7 +727,7 @@ class EnterSolutionFrame(tk.Frame):
 
         if is_correct:
             CORRECT_SOLUTION_SFX.play()
-            self.master.proceed_to_finish(solution, self.target)
+            self.master.proceed_to_finish(solution, self.numbers, self.target)
         else:
             INCORRECT_SOLUTION_SFX.play()
         
@@ -732,7 +736,7 @@ class EnterSolutionFrame(tk.Frame):
         If the player has no solution, they can skip solution entry.
         This will be counted as a loss.
         """
-        self.master.proceed_to_finish(None, self.target)
+        self.master.proceed_to_finish(None, self.numbers, self.target)
 
 
 class SolutionLabel(tk.Label):

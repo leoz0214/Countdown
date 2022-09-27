@@ -77,12 +77,14 @@ class GameEnd(tk.Frame):
     """
 
     def __init__(
-        self, root: tk.Tk, solution: str | None, target: int) -> None:
+        self, root: tk.Tk, solution: str | None,
+        numbers: list[int], target: int) -> None:
 
         super().__init__(root)
         self.root = root
         self.root.title("Countdown - Finish")
         self.solution = solution
+        self.numbers = numbers
         self.target = target
 
         is_win = self.solution is not None
@@ -205,6 +207,24 @@ class GameEnd(tk.Frame):
         self.exit()
         menu.MainMenu(self.root).pack()
     
+    def solutions(self) -> None:
+        """
+        Allows the player to generate solutions.
+        """
+        self.pack_forget()
+        self.solutions_frame = SolutionsFrame(
+            self.root, self, self.numbers, self.target)
+        self.solutions_frame.pack()
+    
+    def exit_solutions(self) -> None:
+        """
+        Returns to the main game over screen upon
+        leaving solution generation.
+        """
+        self.solutions_frame.destroy()
+        self.root.title("Countdown - Finish")
+        self.pack()
+    
 
 class GameEndXpFrame(tk.Frame):
     """
@@ -282,7 +302,8 @@ class GameEndOptionsFrame(tk.Frame):
         self.solutions_button = tk.Button(
             self, font=ink_free(25), text=(
                 "Other solutions" if is_win else "Solutions"),
-            width=15, border=3, bg=ORANGE, activebackground=GREEN)
+            width=15, border=3, bg=ORANGE, activebackground=GREEN,
+            command=master.solutions)
         self.play_again_button = tk.Button(
             self, font=ink_free(25), text="Play again", width=15, border=3,
             bg=ORANGE, activebackground=GREEN, command=master.play_again)
@@ -293,3 +314,39 @@ class GameEndOptionsFrame(tk.Frame):
         self.solutions_button.pack(padx=10, side="left")
         self.play_again_button.pack(padx=10, side="left")
         self.home_button.pack(padx=10, side="right")
+
+
+class SolutionsFrame(tk.Frame):
+    """
+    Holds the window which allows the player to get solutions
+    for a particular target number using smaller numbers,
+    with certain criteria which can be set.
+    """
+
+    def __init__(
+        self, root: tk.Tk, game_end: GameEnd,
+        numbers: list[int], target: int) -> None:
+
+        super().__init__(root)
+        self.root = root
+        self.game_end = game_end
+        self.numbers = numbers
+        self.target = target
+        self.root.title("Countdown - Finish - Solutions")
+
+        self.title_label = tk.Label(
+            self, font=ink_free(100), text="Solutions")
+        self.selected_numbers_frame = game.SelectedNumbersFrame(
+            self, self.numbers)
+        self.target_number_label = game.TargetNumberLabel(self, self.target)
+        self.back_button = tk.Button(
+            self, font=ink_free(25), text="Back", width=15, border=3,
+            bg=ORANGE, activebackground=GREEN,
+            command=self.game_end.exit_solutions)
+
+        self.title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
+        self.selected_numbers_frame.grid(
+            row=1, column=0, columnspan=2, padx=10, pady=10)
+        self.target_number_label.grid(
+            row=2, column=0, padx=10, pady=10, sticky="w")
+        self.back_button.grid(row=3, column=0, columnspan=2, padx=10, pady=10)
