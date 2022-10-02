@@ -1,4 +1,3 @@
-import os
 import json
 
 
@@ -14,19 +13,14 @@ def get_win_streak() -> int:
     """
     Gets number of rounds the player has won consecutively.
     """
-    if not os.path.isfile(STREAK_FILE):
-        with open(STREAK_FILE, "wb") as f:
-            f.write(b"0")
-        return 0
-    
     try:
         with open(STREAK_FILE, "rb") as f:
             streak = int(f.read())
             if streak < 0:
                 raise ValueError
             return streak
-    except ValueError:
-        # File is corrupt.
+    except (FileNotFoundError, ValueError):
+        # File does not exist or is corrupt.
         with open(STREAK_FILE, "wb") as f:
             f.write(b"0")
         return 0
@@ -53,19 +47,14 @@ def get_total_xp() -> int:
     """
     Gets the total XP earned by the player.
     """
-    if not os.path.isfile(XP_FILE):
-        with open(XP_FILE, "wb") as f:
-            f.write(b"0")
-        return 0
-    
     try:
         with open(XP_FILE, "rb") as f:
             xp = int(f.read())
             if xp < 0:
                 raise ValueError
             return xp
-    except ValueError:
-        # File is corrupt.
+    except (FileNotFoundError, ValueError):
+        # File does not exist or is corrupt.
         with open(XP_FILE, "wb") as f:
             f.write(b"0")
         return 0
@@ -84,11 +73,6 @@ def get_recent_numbers() -> list[int]:
     """
     Gets the most recently randomly generated target numbers.
     """
-    if not os.path.isfile(RECENT_NUMBERS_FILE):
-        with open(RECENT_NUMBERS_FILE, "w", encoding="utf8") as f:
-            json.dump([], f)
-        return []
-    
     try:
         with open(RECENT_NUMBERS_FILE, "r", encoding="utf8") as f:
             recent = json.load(f)
@@ -99,8 +83,8 @@ def get_recent_numbers() -> list[int]:
             ):
                 raise ValueError
             return recent
-    except ValueError:
-        # File is corrupt
+    except (FileNotFoundError, ValueError):
+        # File does not exist or is corrupt.
         with open(RECENT_NUMBERS_FILE, "w", encoding="utf8") as f:
             json.dump([], f)
         return []

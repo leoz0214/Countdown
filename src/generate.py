@@ -31,6 +31,8 @@ class SolutionGenerationSettings:
         self.nested_parentheses = bool(nested_parentheses)
         self.operators = operators
         self.seconds_limit = seconds_limit
+        # In case generation is aborted.
+        self.cancel = False
 
 
 def get_too_easy(numbers: list[int]) -> set[int]:
@@ -185,8 +187,8 @@ def check_to_add(parts: list[str], to_add: set[int]) -> None:
 
 def get_solution(
     numbers: list[int], target: int,
-    parentheses_positions: list[list[tuple]], allowed_operators: str,
-    seconds_start: float, seconds_limit: int) -> str | None:
+    parentheses_positions: list[list[tuple]],
+    settings: SolutionGenerationSettings, seconds_start: float) -> str | None:
     """
     Attempts to find a solution for given numbers
     in that particular order along with the target number,
@@ -197,12 +199,15 @@ def get_solution(
     
     # Further randomisation - start from a random product of operators.
     operators_product = tuple(itertools.product(
-        allowed_operators, repeat=len(numbers) - 1))
+        settings.operators, repeat=len(numbers) - 1))
     shift = secrets.choice(range(0, len(operators_product)))
     operators_product = operators_product[shift:] + operators_product[:shift]
     
     for operators in operators_product:
-        if timer() - seconds_start > seconds_limit:
+        if (
+            timer() - seconds_start > settings.seconds_limit
+            or settings.cancel
+        ):
             return
         for i, operator in zip(start_operator_indexes, operators):
             start[i] = operator
@@ -216,7 +221,10 @@ def get_solution(
         operator_indexes = [*start_operator_indexes]
 
         for p in positions:
-            if timer() - seconds_start > seconds_limit:
+            if (
+                timer() - seconds_start > settings.seconds_limit
+                or settings.cancel
+            ):
                 return
             result = add_parentheses(
                 p, current, number_indexes, operator_indexes, len(numbers),
@@ -416,10 +424,13 @@ def generate_solutions(
             perms.remove([])
 
         result = get_solution(
-            choice, target, parentheses_positions[len(choice)],
-            settings.operators, start, settings.seconds_limit)
+            choice, target,parentheses_positions[len(choice)],
+            settings, start)
         if result is not None:
             result = result.replace("*", "x").replace("/", "÷")
             solutions.append(result)
+        
+        if settings.cancel:
+            return []
     
     return solutions

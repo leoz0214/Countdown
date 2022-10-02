@@ -1,5 +1,6 @@
 import tkinter as tk
 import secrets
+import threading
 from typing import Literal
 
 import menu
@@ -7,6 +8,7 @@ import game
 import data
 import level
 import audio
+import generate
 from colours import *
 from font import ink_free
 
@@ -59,6 +61,7 @@ MAX_SOLUTIONS_COUNT = 100
 DEFAULT_SOLUTIONS_COUNT = 10
 
 SOLUTION_PARENTHESES_OPTIONS = ("Allow nested", "Disallow nested", "OFF")
+DEFAULT_SOLUTION_PARENTHESES_OPTION = 0
 
 MIN_SOLUTIONS_SECONDS = 1
 MAX_SOLUTIONS_SECONDS = 60
@@ -237,6 +240,8 @@ class GameEnd(tk.Frame):
         Returns to the main game over screen upon
         leaving solution generation.
         """
+        if self.solutions_frame.settings:
+            self.solutions_frame.cancel(True)
         self.solutions_frame.destroy()
         self.root.title("Countdown - Finish")
         self.pack()
@@ -348,6 +353,7 @@ class SolutionsFrame(tk.Frame):
         self.game_end = game_end
         self.numbers = numbers
         self.target = target
+        self.settings = None
         self.root.title("Countdown - Finish - Solutions")
 
         self.title_label = tk.Label(
@@ -356,18 +362,62 @@ class SolutionsFrame(tk.Frame):
             self, self.numbers)
         self.target_number_label = game.TargetNumberLabel(self, self.target)
         self.solutions_options_frame = SolutionsOptionsFrame(self)
-        self.back_button = tk.Button(
-            self, font=ink_free(25), text="Back", width=15, border=3,
-            bg=ORANGE, activebackground=GREEN,
-            command=self.game_end.exit_solutions)
+        self.solutions_listbox = tk.Listbox(
+            self, font=ink_free(15), width=25, height=10, bg=GREEN, border=5)
+        self.navigation_frame = SolutionsNavigationFrame(self)
 
-        self.title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5)
+        self.title_label.grid(row=0, column=0, columnspan=3, padx=10, pady=5)
         self.selected_numbers_frame.grid(
-            row=1, column=0, columnspan=2, padx=10, pady=5)
+            row=1, column=0, columnspan=3, padx=10, pady=5)
         self.target_number_label.grid(
             row=2, column=0, padx=10, pady=10, sticky="w")
-        self.solutions_options_frame.grid(row=2, column=1, padx=10, pady=5, sticky="w")
-        self.back_button.grid(row=3, column=0, columnspan=2, padx=10, pady=5)
+        self.solutions_options_frame.grid(
+            row=2, column=1, padx=10, pady=5, sticky="w")
+        self.solutions_listbox.grid(row=2, column=2, padx=10, pady=5)
+        self.navigation_frame.grid(
+            row=3, column=0, columnspan=3, padx=10, pady=10)
+    
+    def generate(self) -> None:
+        """
+        Generates solutions and displays them in the listbox.
+        """
+        self.solutions_listbox.delete(0, "end")
+        self.navigation_frame.cancel_generate_button()
+
+        options = self.solutions_options_frame
+        min_number_count = options.min_number_count_frame.count.get()
+        max_number_count = options.max_number_count_frame.count.get()
+        max_solution_count = options.max_solution_count_frame.count.get()
+
+        parentheses = options.parentheses_frame.option.get()
+        nested_parentheses = parentheses if parentheses != -1 else None
+
+        operators = "".join(
+            operator
+            for operator, state in options.operators_frame.operators.items()
+            if state.get()).replace("x", "*").replace("÷", "/")
+        seconds_limit = options.seconds_limit_frame.seconds.get()
+            
+        self.settings = generate.SolutionGenerationSettings(
+            min_number_count, max_number_count, max_solution_count,
+            nested_parentheses, operators, seconds_limit
+        )
+        result = generate.generate_solutions(
+            self.numbers, self.target, self.settings)
+        if not self.settings.cancel:
+            self.navigation_frame.reset_generate_button()
+        self.settings = None
+        
+        if result:
+            self.solutions_listbox.insert(0, *result)
+    
+    def cancel(self, exit: bool = False) -> None:
+        """
+        Cancels generation.
+        """
+        self.settings.cancel = True
+        if not exit:
+            self.navigation_frame.reset_generate_button()
 
 
 class SolutionsOptionsFrame(tk.Frame):
@@ -386,8 +436,8 @@ class SolutionsOptionsFrame(tk.Frame):
         super().__init__(master)
         self.master = master
 
-        self.min_number_count_frame = SolutionNumberCountOFrame(self, "min")
-        self.max_number_count_frame = SolutionNumberCountOFrame(self, "max")
+        self.min_number_count_frame = SolutionNumberCountFrame(self, "min")
+        self.max_number_count_frame = SolutionNumberCountFrame(self, "max")
         self.max_solution_count_frame = MaxSolutionsFrame(self)
         self.parentheses_frame = SolutionParenthesesFrame(self)
         self.operators_frame = SolutionOperatorsFrame(self)
@@ -400,24 +450,24 @@ class SolutionsOptionsFrame(tk.Frame):
         self.operators_frame.pack(padx=10)
         self.seconds_limit_frame.pack(padx=10)
     
-    def check_number_counts(self) -> None:
+    def check_number_counts(self, change: Literal["min", "max"]) -> None:
         """
         Ensures the maximum number count is increased to at least the
         minimum number count if currently lower and that
         the minimum number count is decreased to at least the
         maximum number count if currently lower.
         """
-        min_count = self.min_number_count_frame.count.get()
-        if self.max_number_count_frame.count.get() < min_count:
-            self.max_number_count_frame.count.set(min_count)
-            return
-        
-        max_count = self.max_number_count_frame.count.get()
-        if self.min_number_count_frame.count.get() > max_count:
-            self.min_number_count_frame.count.set(max_count)
+        if change == "min":
+            max_count = self.max_number_count_frame.count.get()
+            if self.min_number_count_frame.count.get() > max_count:
+                self.min_number_count_frame.count.set(max_count)
+        else:
+            min_count = self.min_number_count_frame.count.get()
+            if self.max_number_count_frame.count.get() < min_count:
+                self.max_number_count_frame.count.set(min_count)
 
 
-class SolutionNumberCountOFrame(tk.Frame):
+class SolutionNumberCountFrame(tk.Frame):
     """
     Holds a number count setting (min/max).
     """
@@ -439,7 +489,7 @@ class SolutionNumberCountOFrame(tk.Frame):
             self, font=ink_free(15), length=200,
             from_=MIN_SOLUTION_NUMBERS_COUNT, to=MAX_SOLUTION_NUMBERS_COUNT,
             orient="horizontal", variable=self.count, sliderlength=50,
-            command=lambda _: self.master.check_number_counts())
+            command=lambda _: self.master.check_number_counts(self.bound))
         
         self.label.pack(side="left", padx=10)
         self.count_scale.pack(padx=10)
@@ -479,7 +529,7 @@ class SolutionParenthesesFrame(tk.Frame):
             self, font=ink_free(15, True), text="Parentheses:")
         self.label.pack(side="left", padx=10)
         # 1 - Nested, 0 - No nested, -1 - No parentheses
-        self.option = tk.IntVar(self, 1)
+        self.option = tk.IntVar(self, DEFAULT_SOLUTION_PARENTHESES_OPTION)
 
         for option, value in zip(
             SOLUTION_PARENTHESES_OPTIONS, range(1, -2, -1)
@@ -503,7 +553,7 @@ class SolutionOperatorsFrame(tk.Frame):
         self.label.pack(side="left", padx=10)
 
         self.operators = {
-            operator: tk.IntVar(self, True) for operator in OPERATORS
+            operator: tk.BooleanVar(self, True) for operator in OPERATORS
         }
         for operator in OPERATORS:
             checkbutton = tk.Checkbutton(
@@ -531,3 +581,45 @@ class SolutionsSecondsLimitFrame(tk.Frame):
         
         self.label.pack(side="left", padx=10)
         self.seconds_scale.pack(padx=10)
+
+
+class SolutionsNavigationFrame(tk.Frame):
+    """
+    Holds buttons which allow the player to:
+    - Generate solutions
+    - Go back to the game end screen
+    """
+
+    def __init__(self, master: SolutionsFrame) -> None:
+        super().__init__(master)
+        self.master = master
+        self.generate_button = tk.Button(
+            self, font=ink_free(25), text="Generate", width=15, border=3,
+            bg=ORANGE, activebackground=GREEN,
+            command=lambda: threading.Thread(
+                target=self.master.generate, daemon=True).start())
+
+        self.back_button = tk.Button(
+            self, font=ink_free(25), text="Back", width=15, border=3,
+            bg=ORANGE, activebackground=GREEN,
+            command=master.game_end.exit_solutions)
+        
+        self.generate_button.pack(side="left", padx=10)
+        self.back_button.pack(padx=10)
+    
+    def reset_generate_button(self) -> None:
+        """
+        Resets the generate button to its normal state.
+        """
+        self.generate_button.config(
+            text="Generate", bg=ORANGE, activebackground=GREEN,
+            command=lambda: threading.Thread(
+                target=self.master.generate, daemon=True).start())
+    
+    def cancel_generate_button(self) -> None:
+        """
+        Turns the generate button to a cancel button.
+        """
+        self.generate_button.config(
+            text="Cancel", bg=RED, activebackground=RED,
+            command=self.master.cancel)
