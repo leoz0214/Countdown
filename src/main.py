@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import os
+from contextlib import suppress
 
 import menu
 import game
@@ -25,10 +26,10 @@ def main() -> None:
 def check_for_required_folders() -> None:
     """
     Ensures the required folders for the game to work exist.
-    These folders are created at runtime.
+    These folders are created at runtime (usually the first time).
     """
-    if not os.path.isdir("./data"):
-        os.mkdir("./data")
+    with suppress(FileExistsError):
+        os.mkdir(data.FOLDER)
 
 
 def close_window(root: tk.Tk) -> None:
