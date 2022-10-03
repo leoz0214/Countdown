@@ -1,4 +1,7 @@
 import json
+from contextlib import suppress
+import os
+from typing import Callable
 
 
 FOLDER = "./data"
@@ -9,6 +12,22 @@ RECENT_NUMBERS_FILE = f"{FOLDER}/recent_numbers.json"
 MAX_RECENT_NUMBERS_COUNT = 25
 
 
+def check_folder_exists(function: Callable) -> Callable:
+    """
+    Ensures data folder exists, or else,
+    create the data folder.
+    """
+    def wrap(*args, **kwargs):
+        while True:
+            try:
+                return function(*args, **kwargs)
+            except FileNotFoundError:
+                with suppress(FileExistsError):
+                    os.mkdir(FOLDER)
+    return wrap
+
+
+@check_folder_exists
 def get_win_streak() -> int:
     """
     Gets number of rounds the player has won consecutively.
@@ -26,6 +45,7 @@ def get_win_streak() -> int:
         return 0
 
 
+@check_folder_exists
 def increment_win_streak() -> None:
     """
     Increases win streak by 1
@@ -35,6 +55,7 @@ def increment_win_streak() -> None:
         f.write(str(new_streak).encode())
 
 
+@check_folder_exists
 def reset_win_streak() -> None:
     """
     Resets win streak to 0
@@ -43,6 +64,7 @@ def reset_win_streak() -> None:
         f.write(b"0")
 
 
+@check_folder_exists
 def get_total_xp() -> int:
     """
     Gets the total XP earned by the player.
@@ -60,6 +82,7 @@ def get_total_xp() -> int:
         return 0
 
 
+@check_folder_exists
 def add_total_xp(xp: int) -> None:
     """
     Adds to the total XP earned by the player.
@@ -69,6 +92,7 @@ def add_total_xp(xp: int) -> None:
         f.write(str(new_total_xp).encode())
 
 
+@check_folder_exists
 def get_recent_numbers() -> list[int]:
     """
     Gets the most recently randomly generated target numbers.
@@ -90,6 +114,7 @@ def get_recent_numbers() -> list[int]:
         return []
 
 
+@check_folder_exists
 def add_recent_number(number: int) -> None:
     """
     Adds a randomly generated target number to the recent numbers.
