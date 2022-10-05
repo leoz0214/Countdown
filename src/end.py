@@ -68,6 +68,8 @@ MAX_SOLUTIONS_SECONDS = 60
 DEFAULT_SOLUTIONS_SECONDS = 10
 
 LEVEL_UP_SFX = audio.get_sfx("levelup.wav")
+SOLUTION_FOUND_SFX = audio.get_sfx("solutionfound.wav")
+NO_SOLUTION_FOUND_SFX = audio.get_sfx("nosolutionfound.wav")
 
 
 def get_winning_message(solution: str, target: int) -> str:
@@ -105,6 +107,8 @@ class GameEnd(tk.Frame):
         self.solution = solution
         self.numbers = numbers
         self.target = target
+        self.solutions_frame = SolutionsFrame(
+            self.root, self, self.numbers, self.target)
 
         is_win = self.solution is not None
 
@@ -163,8 +167,8 @@ class GameEnd(tk.Frame):
                     currently_in_number = False
 
             numbers_used_multiplier = NUMBERS_USED_XP_MULTIPLIER.get(
-                numbers_used, 1)
-            if numbers_used_multiplier != 1:
+                numbers_used)
+            if numbers_used_multiplier is not None:
                 # Multiply XP by a factor if 5 or more numbers used.
                 xp_earned *= numbers_used_multiplier
                 xp_sources.append(
@@ -231,18 +235,19 @@ class GameEnd(tk.Frame):
         Allows the player to generate solutions.
         """
         self.pack_forget()
-        self.solutions_frame = SolutionsFrame(
-            self.root, self, self.numbers, self.target)
         self.solutions_frame.pack()
+        self.root.title("Countdown - Finish - Solutions")
     
     def exit_solutions(self) -> None:
         """
         Returns to the main game over screen upon
         leaving solution generation.
         """
+        SOLUTION_FOUND_SFX.stop()
+        NO_SOLUTION_FOUND_SFX.stop()
         if self.solutions_frame.settings:
-            self.solutions_frame.cancel(True)
-        self.solutions_frame.destroy()
+            self.solutions_frame.cancel()
+        self.solutions_frame.pack_forget()
         self.root.title("Countdown - Finish")
         self.pack()
     
@@ -354,7 +359,6 @@ class SolutionsFrame(tk.Frame):
         self.numbers = numbers
         self.target = target
         self.settings = None
-        self.root.title("Countdown - Finish - Solutions")
 
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Solutions")
@@ -381,6 +385,8 @@ class SolutionsFrame(tk.Frame):
         """
         Generates solutions and displays them in the listbox.
         """
+        SOLUTION_FOUND_SFX.stop()
+        NO_SOLUTION_FOUND_SFX.stop()
         self.solutions_listbox.delete(0, "end")
         self.navigation_frame.cancel_generate_button()
 
@@ -410,14 +416,16 @@ class SolutionsFrame(tk.Frame):
         
         if result:
             self.solutions_listbox.insert(0, *result)
+            SOLUTION_FOUND_SFX.play()
+        else:
+            NO_SOLUTION_FOUND_SFX.play()
     
-    def cancel(self, exit: bool = False) -> None:
+    def cancel(self) -> None:
         """
         Cancels generation.
         """
         self.settings.cancel = True
-        if not exit:
-            self.navigation_frame.reset_generate_button()
+        self.navigation_frame.reset_generate_button()
 
 
 class SolutionsOptionsFrame(tk.Frame):
