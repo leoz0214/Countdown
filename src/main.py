@@ -1,7 +1,5 @@
 import tkinter as tk
 from tkinter import messagebox
-import os
-from contextlib import suppress
 
 import menu
 import game
@@ -14,22 +12,12 @@ def main() -> None:
     """
     Main function of app.
     """
-    check_for_required_folders()
     root = tk.Tk()
     root.tk_setPalette(background=DEFAULT_BACKGROUND, foreground=BLACK)
     root.protocol("WM_DELETE_WINDOW", lambda: close_window(root))
     main_menu = menu.MainMenu(root)
     main_menu.pack()
     root.mainloop()
-
-
-def check_for_required_folders() -> None:
-    """
-    Ensures the required folders for the game to work exist.
-    These folders are created at runtime (usually the first time).
-    """
-    with suppress(FileExistsError):
-        os.mkdir(data.FOLDER)
 
 
 def close_window(root: tk.Tk) -> None:

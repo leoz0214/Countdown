@@ -397,6 +397,9 @@ def generate_solutions(
     Gets solutions for a given target number with particular smaller
     numbers based on certain settings.
     """
+    if not settings.operators:
+        return []
+        
     start = timer()
     solutions = []
     parentheses_positions = {
