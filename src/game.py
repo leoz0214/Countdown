@@ -9,6 +9,7 @@ import menu
 import end
 import generate
 import audio
+from utils import draw_circle, evaluate
 from colours import *
 from font import ink_free
 
@@ -38,17 +39,6 @@ KEY_TO_ACTUAL = {
     "parenleft": "(",
     "parenright": ")"
 }
-
-
-def draw_circle(
-    canvas: tk.Canvas, x: int, y: int, radius: int,
-    fill: str | None = None, outline: str = "black") -> None:
-    """
-    Draws a circle with a given centre and radius onto the canvas.
-    """
-    canvas.create_oval(
-        x - radius, y - radius, x + radius, y + radius,
-        fill=fill, outline=outline)
 
 
 class Game(tk.Frame):
@@ -454,7 +444,7 @@ class CountdownClock(tk.Canvas):
                     (
                         (y_op == "-" and angle > 60) or
                         (y_op == "+" and angle > 120))
-                ): 
+                ):
                     self.create_line(x1, y1, x2, y2, fill=WHITE)
                 else:
                     self.create_line(x1, y1, x2, y2, fill=BLACK)
@@ -568,7 +558,7 @@ class EnterSolutionFrame(tk.Frame):
         
         if to_add.isdigit() and not from_pop:
             self.used_numbers.append(to_add)
-        
+      
         affected_buttons = []
         for number in self.used_numbers:
             for button in self.solution_buttons:
@@ -717,7 +707,7 @@ class EnterSolutionFrame(tk.Frame):
         INCORRECT_SOLUTION_SFX.stop()
 
         try:
-            is_correct = round(eval(to_evaluate), 10) == self.target
+            is_correct = evaluate(to_evaluate) == self.target
         except ZeroDivisionError:
             messagebox.showerror(
                 "Cannot divide by 0",

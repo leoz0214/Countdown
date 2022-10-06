@@ -87,6 +87,70 @@ def get_losing_message() -> str:
     return secrets.choice(LOSING_MESSAGES)
 
 
+def get_xp_earned(solution: str | None, streak: int) -> tuple[int, list[str]]:
+    """
+    Gets the XP earned along with the sources of XP.
+    """
+    xp_earned = 25 # Just for playing
+    xp_sources = ["Completed a round (+25XP)"]
+    if solution is not None:
+        xp_earned += 100 # Solution XP
+        xp_sources.append("Solution (+100XP)")
+        # Add operator XP
+        for operator, xp in XP_PER_OPERATOR.items():
+            count = solution.count(operator)
+            if count:
+                earned = count * xp
+                xp_earned += earned
+                xp_sources.append(
+                    "{} operator x{} (+{}XP)".format(
+                        operator, count, earned
+                    ))
+        
+        if all(operator in solution for operator in "+-x÷"):
+            # Bonus for using all operators.
+            xp_earned += 50
+            xp_sources.append("All operators used (+50XP)")
+
+        numbers_used = 0
+        currently_in_number = False
+        for char in solution:
+            if char.isdigit():
+                if not currently_in_number:
+                    numbers_used += 1
+                    currently_in_number = True
+            else:
+                currently_in_number = False
+
+        numbers_used_multiplier = NUMBERS_USED_XP_MULTIPLIER.get(
+            numbers_used)
+        if numbers_used_multiplier is not None:
+            # Multiply XP by a factor if 5 or more numbers used.
+            xp_earned *= numbers_used_multiplier
+            xp_sources.append(
+                "{} numbers used (x{})".format(
+                    numbers_used, numbers_used_multiplier
+                ))
+
+        # Apply Streak XP multiplier. Only apply the biggest one.
+        for required_streak, multiplier in sorted(
+            STREAK_XP_MULTIPLIER.items(),
+            key=lambda streak_to_multiplier: streak_to_multiplier[0],
+            reverse=True
+        ):
+            if streak >= required_streak:
+                xp_earned *= multiplier
+                xp_sources.append(
+                    "Win streak {} or above (x{})".format(
+                        required_streak, multiplier
+                    ))
+                break
+        
+        xp_earned = int(round(xp_earned, 10))
+    
+    return xp_earned, xp_sources
+
+
 class GameEnd(tk.Frame):
     """
     Handles the post-game functionality after a solution is entered
@@ -132,65 +196,10 @@ class GameEnd(tk.Frame):
             self, font=ink_free(25), text="Streak: {} -> {}".format(
                 old_streak, new_streak
             ))
-                
-        xp_earned = 25 # Just for playing
-        xp_sources = ["Completed a round (+25XP)"]
+            
         level_before = level.Level().level
         total_xp_before = data.get_total_xp()
-        if is_win:
-            xp_earned += 100 # Solution XP
-            xp_sources.append("Solution (+100XP)")
-            # Add operator XP
-            for operator, xp in XP_PER_OPERATOR.items():
-                count = self.solution.count(operator)
-                if count:
-                    earned = count * xp
-                    xp_earned += earned
-                    xp_sources.append(
-                        "{} operator x{} (+{}XP)".format(
-                            operator, count, earned
-                        ))
-            
-            if all(operator in solution for operator in "+-x÷"):
-                # Bonus for using all operators.
-                xp_earned += 50
-                xp_sources.append("All operators used (+50XP)")
-
-            numbers_used = 0
-            currently_in_number = False
-            for char in solution:
-                if char.isdigit():
-                    if not currently_in_number:
-                        numbers_used += 1
-                        currently_in_number = True
-                else:
-                    currently_in_number = False
-
-            numbers_used_multiplier = NUMBERS_USED_XP_MULTIPLIER.get(
-                numbers_used)
-            if numbers_used_multiplier is not None:
-                # Multiply XP by a factor if 5 or more numbers used.
-                xp_earned *= numbers_used_multiplier
-                xp_sources.append(
-                    "{} numbers used (x{})".format(
-                        numbers_used, numbers_used_multiplier
-                    ))
-    
-            # Apply Streak XP multiplier. Only apply the biggest one.
-            for required_streak, multiplier in sorted(
-                STREAK_XP_MULTIPLIER.items(),
-                key=lambda streak_to_multiplier: streak_to_multiplier[0],
-                reverse=True
-            ):
-                if new_streak >= required_streak:
-                    xp_earned *= multiplier
-                    xp_sources.append(
-                        "Win streak {} or above (x{})".format(
-                            required_streak, multiplier
-                        ))
-                    break
-            
-            xp_earned = int(round(xp_earned, 10))
+        xp_earned, xp_sources = get_xp_earned(self.solution, new_streak)
         
         self.new_total_xp = total_xp_before + xp_earned
 
