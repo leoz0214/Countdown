@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
+import sys
 
 import menu
 import game
@@ -41,7 +42,7 @@ def close_window(root: tk.Tk) -> None:
     elif isinstance(frame, end.GameEnd):
         frame.exit()
 
-    quit()
+    sys.exit()
 
 
 if __name__ == "__main__":

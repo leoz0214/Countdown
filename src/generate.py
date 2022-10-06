@@ -1,16 +1,10 @@
 import itertools
 import secrets
-import os
 from typing import Literal
-from ctypes import cdll, c_double
 from timeit import default_timer as timer
 
 import data
-
-
-evallib = cdll.LoadLibrary(
-    os.path.dirname(os.path.abspath(__file__)) +"/eval.so")
-evallib.eval.restype = c_double
+from utils import evaluate
 
 
 class SolutionGenerationSettings:
@@ -119,7 +113,7 @@ def check_to_evaluate(operators: tuple[str], parts: list[str]) -> bool:
                 # Parentheses are closing
                 if not has_add_or_subtract.pop():
                     return False
-                elif before_opening_parenthesis.pop() and (
+                if before_opening_parenthesis.pop() and (
                     i + 1 >= parts_count or parts[i+1] == ")"
                     or operators[operator_index] in "+-"
                 ):
@@ -358,20 +352,6 @@ def generate_parentheses_positions(
                 positions.append(new_combo)
 
     return positions
-
-
-def evaluate(expression: str) -> int | float:
-    """
-    Evaluates a simple maths expression with only +/-/*/'/'/().
-    Order of operations followed.
-    
-    Calls fast corresponding function written in C++
-    """
-    result = evallib.eval(expression.encode(), 0, -1)
-    if "/" in expression:
-        result = round(result, 10)
-        return int(result) if result.is_integer() else result
-    return int(result)
 
 
 def generate_number(numbers: list[int]) -> int:
