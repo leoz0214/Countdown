@@ -2,6 +2,7 @@ import tkinter as tk
 from collections import namedtuple
 
 import game
+import stats
 import data
 import level
 from colours import *
@@ -45,6 +46,13 @@ class MainMenu(tk.Frame):
         """
         self.destroy()
         game.Game(self.root).pack()
+    
+    def statistics(self) -> None:
+        """
+        Opens statistics.
+        """
+        self.destroy()
+        stats.StatisticsWindow(self.root).pack()
 
 
 class CurrentWinStreakLabel(tk.Label):
@@ -81,7 +89,8 @@ class MainMenuNavigationFrame(tk.Frame):
             command=master.play)
         self.stats_button = tk.Button(
             self, font=ink_free(15), text="Stats",
-            bg=ORANGE, activebackground=GREEN, width=15, border=3)
+            bg=ORANGE, activebackground=GREEN, width=15, border=3,
+            command=master.statistics)
         self.achievements_button = tk.Button(
             self, font=ink_free(15), text="Achievements",
             bg=ORANGE, activebackground=GREEN, width=15, border=3)
