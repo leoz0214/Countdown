@@ -87,10 +87,11 @@ def get_losing_message() -> str:
     return secrets.choice(LOSING_MESSAGES)
 
 
-def get_xp_earned(solution: str | None, streak: int) -> tuple[int, list[str]]:
+def get_xp_earned(solution: str | None) -> tuple[int, list[str]]:
     """
     Gets the XP earned along with the sources of XP.
     """
+    streak = data.get_win_streak()
     xp_earned = 25 # Just for playing
     xp_sources = ["Completed a round (+25XP)"]
     if solution is not None:
@@ -151,6 +152,38 @@ def get_xp_earned(solution: str | None, streak: int) -> tuple[int, list[str]]:
     return xp_earned, xp_sources
 
 
+class GameData:
+    """
+    Holds data for a particular round, including stats and date/time.
+    """
+
+    def __init__(self, solution: str | None) -> None:
+        self.is_win = solution is not None
+        self.big_numbers = 0
+        self.small_numbers = 0
+
+        if self.is_win:
+            self.operator_counts = {
+                operator: solution.count(operator) for operator in OPERATORS}
+
+            number = ""
+            for char in solution:
+                if char.isdigit():
+                    number += char
+                else:
+                    if number:
+                        if len(number) == 1:
+                            self.small_numbers += 1
+                        else:
+                            self.big_numbers += 1
+                        number = ""
+        else:
+            self.operator_counts = {operator: 0 for operator in OPERATORS}
+
+        self.xp_earned, self.xp_sources = get_xp_earned(solution)
+        print(self.__dict__)
+
+
 class GameEnd(tk.Frame):
     """
     Handles the post-game functionality after a solution is entered
@@ -174,39 +207,39 @@ class GameEnd(tk.Frame):
         self.solutions_frame = SolutionsFrame(
             self.root, self, self.numbers, self.target)
 
-        is_win = self.solution is not None
+        old_streak = data.get_win_streak()
+        if self.solution is not None:
+            data.increment_win_streak()
+        else:
+            data.reset_win_streak()
+        new_streak = data.get_win_streak()
+
+        self.game_data = GameData(self.solution)
 
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Finish")
         
         message = (
             get_winning_message(self.solution, self.target)
-            if is_win else get_losing_message())
+            if self.game_data.is_win else get_losing_message())
         self.message_label = tk.Label(
             self, font=ink_free(25), text=message, width=60)
-
-        old_streak = data.get_win_streak()
-        if is_win:
-            data.increment_win_streak()
-        else:
-            data.reset_win_streak()
-        new_streak = data.get_win_streak()
 
         self.streak_label = tk.Label(
             self, font=ink_free(25), text="Streak: {} -> {}".format(
                 old_streak, new_streak
             ))
-            
+
         level_before = level.Level().level
         total_xp_before = data.get_total_xp()
-        xp_earned, xp_sources = get_xp_earned(self.solution, new_streak)
         
-        self.new_total_xp = total_xp_before + xp_earned
+        self.new_total_xp = total_xp_before + self.game_data.xp_earned
 
         self.xp_frame = GameEndXpFrame(
-            self, xp_sources, xp_earned, level_before)
+            self, self.game_data.xp_sources,
+            self.game_data.xp_earned, level_before)
         
-        self.options_frame = GameEndOptionsFrame(self, is_win)
+        self.options_frame = GameEndOptionsFrame(self, self.game_data.is_win)
 
         self.title_label.pack(padx=15, pady=5)
         self.message_label.pack(padx=10, pady=5)
