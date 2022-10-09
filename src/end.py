@@ -157,17 +157,27 @@ class GameData:
     Holds data for a particular round, including stats and date/time.
     """
 
-    def __init__(self, solution: str | None) -> None:
-        self.is_win = solution is not None
+    def __init__(
+        self, numbers: list[int], target: int, solution: str | None,
+        start_time: float, stop_time: float
+    ) -> None:
+        self.numbers = numbers
+        self.target = target
+        self.solution = solution
+        self.start_time = start_time
+        self.stop_time = stop_time
+        self.is_win = self.solution is not None
         self.big_numbers = 0
         self.small_numbers = 0
 
         if self.is_win:
             self.operator_counts = {
-                operator: solution.count(operator) for operator in OPERATORS}
+                operator: self.solution.count(operator)
+                for operator in OPERATORS}
 
             number = ""
-            for char in solution:
+            # Space purposely added for final check for a number.
+            for char in self.solution + " ":
                 if char.isdigit():
                     number += char
                 else:
@@ -180,8 +190,13 @@ class GameData:
         else:
             self.operator_counts = {operator: 0 for operator in OPERATORS}
 
-        self.xp_earned, self.xp_sources = get_xp_earned(solution)
-        print(self.__dict__)
+        self.xp_earned, self.xp_sources = get_xp_earned(self.solution)
+    
+    def dict(self) -> dict:
+        """
+        Returns attributes as a dictionary.
+        """
+        return self.__dict__
 
 
 class GameEnd(tk.Frame):
@@ -196,31 +211,34 @@ class GameEnd(tk.Frame):
 
     def __init__(
         self, root: tk.Tk, solution: str | None,
-        numbers: list[int], target: int) -> None:
+        numbers: list[int], target: int,
+        start_time: float, stop_time: float) -> None:
 
         super().__init__(root)
         self.root = root
         self.root.title("Countdown - Finish")
-        self.solution = solution
-        self.numbers = numbers
-        self.target = target
-        self.solutions_frame = SolutionsFrame(
-            self.root, self, self.numbers, self.target)
 
         old_streak = data.get_win_streak()
-        if self.solution is not None:
+        if solution is not None:
             data.increment_win_streak()
         else:
             data.reset_win_streak()
         new_streak = data.get_win_streak()
 
-        self.game_data = GameData(self.solution)
+        self.game_data = GameData(
+            numbers, target, solution, start_time, stop_time)
+        data.add_game_data(self.game_data.dict())
+
+        level_before = level.Level().level
+        total_xp_before = data.get_total_xp()
+        self.new_total_xp = total_xp_before + self.game_data.xp_earned
 
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Finish")
         
         message = (
-            get_winning_message(self.solution, self.target)
+            get_winning_message(
+                self.game_data.solution, self.game_data.target)
             if self.game_data.is_win else get_losing_message())
         self.message_label = tk.Label(
             self, font=ink_free(25), text=message, width=60)
@@ -230,16 +248,14 @@ class GameEnd(tk.Frame):
                 old_streak, new_streak
             ))
 
-        level_before = level.Level().level
-        total_xp_before = data.get_total_xp()
-        
-        self.new_total_xp = total_xp_before + self.game_data.xp_earned
-
         self.xp_frame = GameEndXpFrame(
             self, self.game_data.xp_sources,
             self.game_data.xp_earned, level_before)
         
         self.options_frame = GameEndOptionsFrame(self, self.game_data.is_win)
+
+        self.solutions_frame = SolutionsFrame(
+            self.root, self, self.game_data.numbers, self.game_data.target)
 
         self.title_label.pack(padx=15, pady=5)
         self.message_label.pack(padx=10, pady=5)
@@ -253,6 +269,7 @@ class GameEnd(tk.Frame):
         """
         LEVEL_UP_SFX.stop()
         self.destroy()
+        self.solutions_frame.destroy()
         # In case animated XP gain is not finished.
         current_total_xp = data.get_total_xp()
         if current_total_xp < self.new_total_xp:

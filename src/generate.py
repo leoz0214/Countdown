@@ -415,5 +415,5 @@ def generate_solutions(
         
         if settings.cancel:
             return []
-    
-    return solutions
+            
+    return solutions if not settings.cancel else []
