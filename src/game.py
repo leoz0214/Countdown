@@ -3,6 +3,7 @@ from tkinter import messagebox
 import secrets
 import math
 import itertools
+import time
 from timeit import default_timer as timer
 
 import menu
@@ -26,6 +27,8 @@ COUNTDOWN_MUSIC = audio.get_music("countdown.wav")
 
 SHUFFLES_BEFORE_REAL_NUMBER = 25
 SHUFFLE_DELAY_MS = 50
+
+COUNTDOWN_REFRESH_RATE_MS = 25
 
 DURATION_S = 30
 
@@ -69,6 +72,7 @@ class Game(tk.Frame):
         numbers = [
             int(label.cget("text"))
             for label in self.frame.selected_numbers_frame.number_labels]
+        self.start_time = time.time()
         self.frame.destroy()
         self.frame = CountdownFrame(self, numbers)
         self.frame.pack()
@@ -91,7 +95,10 @@ class Game(tk.Frame):
         """
         self.destroy()
         self.root.unbind("<Key>")
-        end.GameEnd(self.root, solution, numbers, target).pack()
+        stop_time = time.time()
+        end.GameEnd(
+            self.root, solution, numbers, target,
+            self.start_time, stop_time).pack()
 
 
 class SelectNumbersFrame(tk.Frame):
@@ -336,7 +343,7 @@ class CountdownFrame(tk.Frame):
             # Refresh the clock.
             self.countdown_clock = CountdownClock(self, time_passed)
             self.countdown_clock.pack(padx=10, pady=10)
-        self.after(25, self.count_down)
+        self.after(COUNTDOWN_REFRESH_RATE_MS, self.count_down)
 
 
 class TargetNumberLabel(tk.Label):
