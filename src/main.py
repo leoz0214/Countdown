@@ -1,17 +1,41 @@
 import tkinter as tk
 from tkinter import messagebox
 import sys
+import secrets
+
+from tendo import singleton
 
 import menu
 import game
 import end
 import data
+import audio
+from font import ink_free
 from colours import *
+
+
+ERROR_SFX = [audio.get_sfx(f"error{n}.wav") for n in range(1, 3)]
 
 
 def main() -> None:
     """
-    Main function of app.
+    Main function of the program.
+    """
+    # Only allows one instance of the main program to be run at any time.
+    # Prevents the risks of race conditions, especially during IO.
+    # Defensive.
+    try:
+        global instance_check # Required for check to work in function.
+        instance_check = singleton.SingleInstance()
+    except singleton.SingleInstanceException:
+        existing_instance()
+    else:
+        launch()
+
+
+def launch() -> None:
+    """
+    Runs the main application.
     """
     root = tk.Tk()
     root.tk_setPalette(background=DEFAULT_BACKGROUND, foreground=BLACK)
@@ -43,6 +67,44 @@ def close_window(root: tk.Tk) -> None:
         frame.exit()
 
     sys.exit()
+
+
+def retry(old_root: tk.Tk) -> None:
+    """
+    Retries launching the main application.
+    """
+    old_root.destroy()
+    main()
+
+
+def existing_instance() -> None:
+    """
+    The window displayed if an instance of the application
+    already exists.
+    """
+    root = tk.Tk()
+    root.title("Application Instance Error")
+    root.tk_setPalette(background=DEFAULT_BACKGROUND, foreground=BLACK)
+    secrets.choice(ERROR_SFX).play()
+
+    title_label = tk.Label(root, font=ink_free(75, True), text="Error", fg=RED)
+    message_label = tk.Label(
+        root, font=ink_free(25),
+        text=("An instance of the application is already running.\n"
+              "Only one instance can be run at any time.\n"
+              "Sorry for the inconvenience."))
+    retry_button = tk.Button(
+        root, font=ink_free(25), text="Retry", width=20, border=5,
+        bg=ORANGE, activebackground=GREEN, command=lambda: retry(root))
+    exit_button = tk.Button(
+        root, font=ink_free(25), text="Exit", width=20, border=5,
+        bg=ORANGE, activebackground=RED, command=sys.exit)
+
+    title_label.pack(padx=25, pady=25)
+    message_label.pack(padx=25, pady=25)
+    retry_button.pack(padx=25, pady=10)
+    exit_button.pack(padx=25, pady=10)
+    root.mainloop()
 
 
 if __name__ == "__main__":
