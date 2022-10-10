@@ -4,7 +4,11 @@ import shutil
 from contextlib import suppress
 from typing import Callable
 
-import ujson as json
+try:
+    # Faster json module.
+    import ujson as json
+except ImportError:
+    import json
 
 
 FOLDER = "./data"
