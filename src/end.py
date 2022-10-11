@@ -192,11 +192,11 @@ class GameData:
 
         self.xp_earned, self.xp_sources = get_xp_earned(self.solution)
     
-    def dict(self) -> dict:
+    def save(self) -> None:
         """
-        Returns attributes as a dictionary.
+        Saves game data.
         """
-        return self.__dict__
+        data.add_game_data(self.__dict__)
 
 
 class GameEnd(tk.Frame):
@@ -218,6 +218,8 @@ class GameEnd(tk.Frame):
         self.root = root
         self.root.title("Countdown - Finish")
 
+        data.increment_games_played()
+
         old_streak = data.get_win_streak()
         if solution is not None:
             data.increment_win_streak()
@@ -227,7 +229,7 @@ class GameEnd(tk.Frame):
 
         self.game_data = GameData(
             numbers, target, solution, start_time, stop_time)
-        data.add_game_data(self.game_data.dict())
+        self.game_data.save()
 
         level_before = level.Level().level
         total_xp_before = data.get_total_xp()
