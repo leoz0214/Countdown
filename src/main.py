@@ -87,7 +87,8 @@ def existing_instance() -> None:
     root.tk_setPalette(background=DEFAULT_BACKGROUND, foreground=BLACK)
     secrets.choice(ERROR_SFX).play()
 
-    title_label = tk.Label(root, font=ink_free(75, True), text="Error", fg=RED)
+    title_label = tk.Label(
+        root, font=ink_free(75, True), text="Error", fg=RED)
     message_label = tk.Label(
         root, font=ink_free(25),
         text=("An instance of the application is already running.\n"
