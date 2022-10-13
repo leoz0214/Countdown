@@ -9,7 +9,7 @@ try:
     # Faster json module.
     import ujson as json
 except ImportError:
-    print("Warning: usjon not found, using built-in json instead.")
+    print("Warning: ujson not found, using built-in json instead.")
     import json
 
 
@@ -20,6 +20,11 @@ RECENT_NUMBERS_FILE = f"{FOLDER}/recent_numbers.json"
 STATS_FOLDER = f"{FOLDER}/stats"
 XP_FILE = f"{STATS_FOLDER}/xp.dat"
 GAMES_PLAYED_FILE = f"{STATS_FOLDER}/played.dat"
+GAMES_WON_FILE = f"{STATS_FOLDER}/won.dat"
+BEST_WIN_STREAK_FILE = f"{STATS_FOLDER}/best_streak.dat"
+SMALL_NUMBERS_FILE = f"{STATS_FOLDER}/small.dat"
+BIG_NUMBERS_FILE = f"{STATS_FOLDER}/big.dat"
+SECONDS_PLAYED_FILE = f"{STATS_FOLDER}/time.dat"
 
 GAME_DATA_FOLDER = f"{FOLDER}/game_data"
 
@@ -50,7 +55,6 @@ def get_incremental_data_functions(
     Creates simple incremental data functions to be used for a variety
     of data that needs to be stored in this program.
     """
-    @check_folder_exists()
     def get() -> int:
         try:
             with open(file, "rb") as f:
@@ -64,17 +68,51 @@ def get_incremental_data_functions(
                 f.write(b"0")
             return 0
 
-    @check_folder_exists()
     def increment() -> None:
         new = get() + 1
         with open(file, "wb") as f:
             f.write(str(new).encode())
 
     if required_folders:
-        for folder in required_folders:
+        for folder in reversed(required_folders):
             get = check_folder_exists(folder)(get)
             increment = check_folder_exists(folder)(increment)
+    get = check_folder_exists()(get)
+    increment = check_folder_exists()(increment)
     return get, increment
+
+
+def get_additive_data_functions(
+    file: str, required_folders: tuple[str] = None, 
+    data_type: type = int) -> tuple[Callable]:
+    """
+    Creates simple additive data functions (for adding to a number).
+    """
+    def get() -> int | float:
+        try:
+            with open(file, "rb") as f:
+                value = data_type(f.read())
+            if value < 0:
+                raise ValueError
+            return value
+        except (FileNotFoundError, ValueError):
+            # File does not exist or is corrupt.
+            with open(file, "wb") as f:
+                f.write(b"0")
+            return 0
+    
+    def add(value: int | float) -> None:
+        new = get() + value
+        with open(file, "wb") as f:
+            f.write(str(new).encode())
+
+    if required_folders:
+        for folder in reversed(required_folders):
+            get = check_folder_exists(folder)(get)
+            add = check_folder_exists(folder)(add)
+    get = check_folder_exists()(get)
+    add = check_folder_exists()(add)
+    return get, add
 
 
 get_win_streak, increment_win_streak = (
@@ -82,6 +120,24 @@ get_win_streak, increment_win_streak = (
 
 get_games_played, increment_games_played = (
     get_incremental_data_functions(GAMES_PLAYED_FILE, (STATS_FOLDER,)))
+
+get_win_count, increment_win_count = (
+    get_incremental_data_functions(GAMES_WON_FILE, (STATS_FOLDER,)))
+
+get_best_win_streak, increment_best_win_streak = (
+    get_incremental_data_functions(BEST_WIN_STREAK_FILE, (STATS_FOLDER,)))
+
+get_total_xp, add_total_xp = (
+    get_additive_data_functions(XP_FILE, (STATS_FOLDER,)))
+
+get_small_numbers_used, add_small_numbers_used = (
+    get_additive_data_functions(SMALL_NUMBERS_FILE, (STATS_FOLDER,)))
+
+get_big_numbers_used, add_big_numbers_used = (
+    get_additive_data_functions(BIG_NUMBERS_FILE, (STATS_FOLDER,)))
+
+get_seconds_played, add_seconds_played = (
+    get_additive_data_functions(SECONDS_PLAYED_FILE, (STATS_FOLDER,), float))
 
 
 @check_folder_exists()
@@ -92,36 +148,6 @@ def reset_win_streak() -> None:
     with open(STREAK_FILE, "wb") as f:
         f.write(b"0")
 
-
-@check_folder_exists()
-@check_folder_exists(STATS_FOLDER)
-def get_total_xp() -> int:
-    """
-    Gets the total XP earned by the player.
-    """
-    try:
-        with open(XP_FILE, "rb") as f:
-            xp = int(f.read())
-            if xp < 0:
-                raise ValueError
-            return xp
-    except (FileNotFoundError, ValueError):
-        # File does not exist or is corrupt.
-        with open(XP_FILE, "wb") as f:
-            f.write(b"0")
-        return 0
-
-
-@check_folder_exists()
-@check_folder_exists(STATS_FOLDER)
-def add_total_xp(xp: int) -> None:
-    """
-    Adds to the total XP earned by the player.
-    """
-    new_total_xp = get_total_xp() + xp
-    with open(XP_FILE, "wb") as f:
-        f.write(str(new_total_xp).encode())
-        
 
 @check_folder_exists()
 def get_recent_numbers() -> list[int]:
@@ -179,7 +205,7 @@ def get_game_data() -> list[dict]:
         while True:
             with gzip.open(files[index], "rt", encoding="utf8") as f:
                 data = json.load(f)
-            for game in data[:]:
+            for game in data.copy():
                 if current_timestamp - game["stop_time"] > SECONDS_IN_30_DAYS:
                     if not found_expired:
                         found_expired = True
@@ -197,6 +223,7 @@ def get_game_data() -> list[dict]:
                     break
                 else:
                     os.remove(files[index])
+                    # Restart the process.
                     files = files[index + 1:]
                     index = len(files) // 2
                     found_expired = False

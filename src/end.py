@@ -226,10 +226,19 @@ class GameEnd(tk.Frame):
         else:
             data.reset_win_streak()
         new_streak = data.get_win_streak()
+        if new_streak > data.get_best_win_streak():
+            data.increment_best_win_streak()
 
         self.game_data = GameData(
             numbers, target, solution, start_time, stop_time)
         self.game_data.save()
+        if self.game_data.is_win:
+            data.increment_win_count()
+            if self.game_data.small_numbers:
+                data.add_small_numbers_used(self.game_data.small_numbers)
+            if self.game_data.big_numbers:
+                data.add_big_numbers_used(self.game_data.big_numbers)
+        data.add_seconds_played(stop_time - start_time)
 
         level_before = level.Level().level
         total_xp_before = data.get_total_xp()
