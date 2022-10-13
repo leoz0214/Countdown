@@ -1,6 +1,5 @@
 from pygame import mixer
 
-
 mixer.init()
 
 
@@ -10,8 +9,7 @@ def get_sfx(filename: str) -> mixer.Sound:
     returning a pygame Sound object.
     Path not required, just the name of the file.
     """
-    path = f"./audio/sfx/{filename}"
-    return mixer.Sound(path)
+    return mixer.Sound(f"./audio/sfx/{filename}")
 
 
 def get_music(filename: str) -> mixer.Sound:
@@ -20,5 +18,4 @@ def get_music(filename: str) -> mixer.Sound:
     returning a pygame Sound object.
     Path not required, just the name of the file.
     """
-    path = f"./audio/music/{filename}"
-    return mixer.Sound(path)
+    return mixer.Sound(f"./audio/music/{filename}")

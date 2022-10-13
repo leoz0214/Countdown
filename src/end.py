@@ -239,6 +239,7 @@ class GameEnd(tk.Frame):
             if self.game_data.big_numbers:
                 data.add_big_numbers_used(self.game_data.big_numbers)
         data.add_seconds_played(stop_time - start_time)
+        data.add_operators_used(self.game_data.operator_counts)
 
         level_before = level.Level().level
         total_xp_before = data.get_total_xp()
