@@ -1,5 +1,10 @@
-def ink_free(size: int, bold: bool = False) -> tuple:
+def ink_free(size: int, bold: bool = False, italic: bool = False) -> tuple:
     """
     Utility function for 'Ink Free' font.
     """
-    return ("Ink Free", size, "bold") if bold else ("Ink Free", size)
+    font = ("Ink Free", size)
+    if bold:
+        font += ("bold",)
+    if italic:
+        font += ("italic",)
+    return font

@@ -10,7 +10,7 @@ import menu
 import end
 import generate
 import audio
-from utils import draw_circle, evaluate
+from utils import draw_circle, evaluate, bool_to_state
 from colours import *
 from font import ink_free
 
@@ -541,7 +541,7 @@ class EnterSolutionFrame(tk.Frame):
                 return
             new_solution = current_solution + "x" + to_add
         else:
-            if len(current_solution) >= MAX_SOLUTION_LENGTH - len(to_add) + 1:
+            if len(current_solution) > MAX_SOLUTION_LENGTH - len(to_add):
                 # Cannot insert n more characters.
                 return
             new_solution = current_solution + to_add
@@ -549,20 +549,18 @@ class EnterSolutionFrame(tk.Frame):
         self.solution_label.config(text=new_solution)
 
         if to_add.isdigit() or to_add == ")":
-            # Next, an operator or parenthesis is expected.
+            # Next, an operator or closing parenthesis is expected.
             for button in self.solution_buttons:
                 button.config(
-                    state=(
-                    "disabled" if button.cget("text").isdigit()
-                    else "normal"))
+                    state=bool_to_state(not button.cget("text").isdigit()))
         else:
-            # Next, a number or closing parenthesis is expected.
+            # Next, a number or opening parenthesis is expected.
             for button in self.solution_buttons:
                 button.config(
-                    state=(
-                    "normal" if button.cget("text").isdigit()
-                    or button.cget("text") == "(" else "disabled"))
-        
+                    state=bool_to_state(
+                        button.cget("text").isdigit()
+                        or button.cget("text") == "("))
+
         if to_add.isdigit() and not from_pop:
             self.used_numbers.append(to_add)
       
@@ -574,11 +572,11 @@ class EnterSolutionFrame(tk.Frame):
                     button.cget("text") == number
                     and button not in affected_buttons
                 ):
+                    affected_buttons.append(button)
                     if (
                         button.cget("disabledforeground") != GREY
                         or button.cget("state") == "normal"
                     ):
-                        affected_buttons.append(button)
                         button.config(
                             state="disabled", disabledforeground=GREY)
                     break
@@ -587,8 +585,7 @@ class EnterSolutionFrame(tk.Frame):
         if len(self.used_numbers) == NUMBER_COUNT:
             for button in self.solution_buttons:
                 button.config(
-                    state="disabled" if button.cget("text") not in ")←"
-                    else "normal")
+                    state=bool_to_state(button.cget("text") in ")←"))
         
         if to_add == "(" and not from_pop:
             self.opening_parentheses += 1
@@ -606,10 +603,9 @@ class EnterSolutionFrame(tk.Frame):
 
         self.option_buttons.reset_button.config(state="normal")
         self.option_buttons.submit_button.config(
-            state=(
-                "normal" if
+            state=bool_to_state(
                 self.opening_parentheses == self.closing_parentheses
-                and (to_add.isdigit() or to_add == ")") else "disabled"))
+                and (to_add.isdigit() or to_add == ")")))
     
     def pop(self) -> None:
         """
@@ -621,7 +617,7 @@ class EnterSolutionFrame(tk.Frame):
             return
 
         index = -1
-        while current_solution[index:].isdigit():
+        while current_solution[index].isdigit():
             if abs(index) >= len(current_solution):
                 break
             index -= 1
@@ -653,7 +649,7 @@ class EnterSolutionFrame(tk.Frame):
         # Re-adds input before the removed input.
         # This prevents code duplication.
         index = -1
-        while new_solution[index:].isdigit():
+        while new_solution[index].isdigit():
             if abs(index) >= len(new_solution):
                 break
             index -= 1
@@ -674,9 +670,9 @@ class EnterSolutionFrame(tk.Frame):
         self.solution_label.config(text="")
         for button in self.solution_buttons:
             button.config(
-                state=(
-                    "normal" if button.cget("text").isdigit()
-                    or button.cget("text") == "(" else "disabled"),
+                state=bool_to_state(
+                    button.cget("text").isdigit()
+                    or button.cget("text") == "("),
                 disabledforeground=RED)
 
         self.option_buttons.reset_button.config(state="disabled")
@@ -713,16 +709,7 @@ class EnterSolutionFrame(tk.Frame):
         to_evaluate = solution.replace("x", "*").replace("÷", "/")
         INCORRECT_SOLUTION_SFX.stop()
 
-        try:
-            is_correct = evaluate(to_evaluate) == self.target
-        except ZeroDivisionError:
-            messagebox.showerror(
-                "Cannot divide by 0",
-                    "Your solution is invalid because you are trying to "
-                    "divide by 0, but this is undefined.")
-            return
-
-        if is_correct:
+        if evaluate(to_evaluate) == self.target:
             CORRECT_SOLUTION_SFX.play()
             self.master.proceed_to_finish(solution, self.numbers, self.target)
         else:

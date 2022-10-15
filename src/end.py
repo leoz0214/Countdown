@@ -253,7 +253,7 @@ class GameEnd(tk.Frame):
                 self.game_data.solution, self.game_data.target)
             if self.game_data.is_win else get_losing_message())
         self.message_label = tk.Label(
-            self, font=ink_free(25), text=message, width=60)
+            self, font=ink_free(25, italic=True), text=message, width=60)
 
         self.streak_label = tk.Label(
             self, font=ink_free(25), text="Streak: {} -> {}".format(

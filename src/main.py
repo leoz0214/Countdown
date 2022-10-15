@@ -110,9 +110,4 @@ def existing_instance() -> None:
 
 
 if __name__ == "__main__":
-    import shutil
-    for i in range(10000):
-        end.GameData([10,20,30,50,60,70,80], 923, "1+2x3-4x5+6+(7x8)", 234, 2333).save()
-    print(len(data.get_game_data()))
-    shutil.rmtree("./data")
-    # main()
+    main()
