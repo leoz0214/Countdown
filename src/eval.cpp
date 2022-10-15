@@ -1,4 +1,5 @@
 #include <string.h>
+#include <cmath>
 
 
 extern "C" {
@@ -60,9 +61,9 @@ double eval(char expression[], int first, int last) {
 
             result = eval(expression, i+1, i+r-1);
             previous_number = result;
-            if (result == -1) {
+            if (std::isnan(result)) {
                 // Invalid
-                return -1;
+                return nan("0x12345");
             }
             if (is_multiplying) {
                 if (multiplying_and_dividing_total != 0) {
@@ -73,7 +74,7 @@ double eval(char expression[], int first, int last) {
             } else if (is_dividing)  {
                 if (result == 0) {
                     // Cannot divide by 0
-                    return -1;
+                    return nan("0x12345");
                 } else if (multiplying_and_dividing_total != 0) {
                     multiplying_and_dividing_total /= result;
                 }
@@ -85,7 +86,7 @@ double eval(char expression[], int first, int last) {
         } else {
             // Operator
             if (is_dividing && number == 0 && !just_evaluated_parentheses) {
-                return -1;
+                return nan("0x12345");
             } else if (number != -1) {
                 if (is_multiplying) {
                     multiplying_and_dividing_total *= number;
@@ -128,7 +129,7 @@ double eval(char expression[], int first, int last) {
     }
 
     if (is_dividing && number == 0 && !just_evaluated_parentheses) {
-        return -1;
+        return nan("0x12345");
     } else if (number != -1) {
         // Final number
         if (is_multiplying) {

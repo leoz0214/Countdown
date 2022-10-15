@@ -12,6 +12,8 @@ except ImportError:
     print("Warning: ujson not found, using built-in json instead.")
     import json
 
+from utils import days_to_seconds
+
 
 OPERATORS = "+-x÷"
 
@@ -39,7 +41,7 @@ MAX_GAME_DATA_PER_FILE = 100
 # Beyond that, game data older than 30 days is deleted.
 MAX_ALLOWED_GAME_DATA = 1000
 
-SECONDS_IN_30_DAYS = 2_592_000
+SECONDS_IN_30_DAYS = days_to_seconds(30)
 
 
 def check_folder_exists(folder: str = FOLDER) -> Callable:
