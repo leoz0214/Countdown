@@ -59,8 +59,9 @@ def close_window(root: tk.Tk) -> None:
             "Quit Game",
                 "You are in the middle of a round.\n"
                 "Are you sure you would like to quit now?\n"
-                "Your stats will be unaffected, but\n"
-                "this round will be counted as a loss.", icon="warning"
+                "Your stats will be unaffected, but "
+                "this round will be counted as a loss. "
+                "Your streak will be reset.", icon="warning"
         ):
             return
         data.reset_win_streak()

@@ -407,7 +407,7 @@ def generate_solutions(
             perms.remove([])
 
         result = get_solution(
-            choice, target,parentheses_positions[len(choice)],
+            choice, target, parentheses_positions[len(choice)],
             settings, start)
         if result is not None:
             result = result.replace("*", "x").replace("/", "÷")

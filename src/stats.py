@@ -1,6 +1,7 @@
 import tkinter as tk
 import time
 
+import menu
 import data
 import level
 from colours import *
@@ -81,7 +82,7 @@ class StatisticsWindow(tk.Frame):
     Allows the player to view statistics of their gameplay.
     """
 
-    def __init__(self, root: tk.Tk) -> None:
+    def __init__(self, root: tk.Tk, page_number: int = 1) -> None:
         super().__init__(root)
         self.root = root
         self.root.title("Countdown - Statistics")
@@ -102,10 +103,36 @@ class StatisticsWindow(tk.Frame):
             self, font=ink_free(75, True), text="Statistics")
 
         self.pages_frame = PagesFrame(
-            self, last_24_hours_data, last_7_days_data, last_30_days_data)
+            self, page_number,
+            last_24_hours_data, last_7_days_data, last_30_days_data)
+        
+        self.back_button = tk.Button(
+            self, font=ink_free(25), width=10, border=5, text="Back",
+            bg=ORANGE, activebackground=RED, command=self.back)
+        
+        self.refresh_button = tk.Button(
+            self, font=ink_free(25), width=10, border=5, text="Refresh",
+            bg=ORANGE, activebackground=GREEN, command=self.refresh)
         
         self.title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
         self.pages_frame.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
+        self.back_button.grid(row=2, column=0, padx=10, pady=10, sticky="e")
+        self.refresh_button.grid(
+            row=2, column=1, padx=10, pady=10, sticky="w")
+    
+    def back(self) -> None:
+        """
+        Returns back to the main menu.
+        """
+        self.destroy()
+        menu.MainMenu(self.root).pack()
+    
+    def refresh(self) -> None:
+        """
+        Refresh statistics (time changes).
+        """
+        self.destroy()
+        StatisticsWindow(self.root, self.pages_frame.current_page).pack()
 
 
 class TimedStatisticLabelFrame(tk.LabelFrame):
@@ -161,8 +188,7 @@ class OperatorsUsedLabelFrame(tk.LabelFrame):
         operator_headings = [
             tk.Label(
                 self, font=ink_free(15, True), width=3,
-                text=operator, anchor="e")
-            for operator in OPERATORS]
+                text=operator, anchor="e") for operator in OPERATORS]
         
         values = (last_24_hours, last_7_days, last_30_days, all_time)
         self.parts = [
@@ -210,10 +236,13 @@ class PagesFrame(tk.Frame):
     """
 
     def __init__(
-        self, master: StatisticsWindow, last_24_hours_data: dict,
-        last_7_days_data: dict, last_30_days_data: dict
+        self, master: StatisticsWindow, starting_page_number: int,
+        last_24_hours_data: dict, last_7_days_data: dict,
+        last_30_days_data: dict
     ) -> None:
-        super().__init__(master)
+        super().__init__(master, width=1200, height=360)
+        # Keep size of frame constant as the current page changes.
+        self.pack_propagate(False)
         self.pages = []
 
         first_page = tk.Frame(self)
@@ -281,7 +310,7 @@ class PagesFrame(tk.Frame):
 
         self.first_page = 1
         self.last_page = self.total_pages = len(self.pages)
-        self.current_page = 1
+        self.current_page = starting_page_number
 
         self.navigation_frame = PageNavigationFrame(self)
         self.navigation_frame.pack(padx=10, pady=10)
