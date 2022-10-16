@@ -816,9 +816,8 @@ class EnterSolutionOptionsFrame(tk.Frame):
 
         self.skip_button = tk.Button(
             self, font=ink_free(25), text="No solution", width=10, border=5,
-            bg=ORANGE, activebackground=RED,
-            command=master.skip)
+            bg=ORANGE, activebackground=RED, command=master.skip)
         
         self.reset_button.pack(padx=10, side="left")
         self.submit_button.pack(padx=10, side="left")
-        self.skip_button.pack(padx=10, side="right")
+        self.skip_button.pack(padx=10)
