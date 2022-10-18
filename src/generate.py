@@ -98,7 +98,6 @@ def check_to_evaluate(operators: tuple[str], parts: list[str]) -> bool:
     # ) is followed by +/-, False is still returned, and vice versa.
     before_opening_parenthesis = []
     operator_index = 0
-    parts_count = len(parts)
     for i, part in enumerate(parts):
         if part == "(":
             # New set of parentheses opened.
@@ -107,14 +106,14 @@ def check_to_evaluate(operators: tuple[str], parts: list[str]) -> bool:
             has_add_or_subtract.append(False)
             before_opening_parenthesis.append(
                 not i or parts[i-1] == "("
-                or operators[operator_index-1] in "+-")
+                or operators[operator_index - 1] in "+-")
         elif opened:
             if part == ")":
                 # Parentheses are closing
                 if not has_add_or_subtract.pop():
                     return False
                 if before_opening_parenthesis.pop() and (
-                    i + 1 >= parts_count or parts[i+1] == ")"
+                    i + 1 >= len(parts) or parts[i+1] == ")"
                     or operators[operator_index] in "+-"
                 ):
                     return False
