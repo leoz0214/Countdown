@@ -1,6 +1,6 @@
 import tkinter as tk
 import os
-from ctypes import cdll, c_double
+from ctypes import c_int, cdll, c_double
 
 
 evallib = cdll.LoadLibrary(
