@@ -1,10 +1,16 @@
 import itertools
 import secrets
-from typing import Literal
 from timeit import default_timer as timer
+import ctypes
+import os
 
 import data
 from utils import evaluate
+
+
+genlib = ctypes.cdll.LoadLibrary(
+    f"{os.path.dirname(os.path.abspath(__file__))}/generate.so")
+genlib.generate_number.restype = ctypes.c_int
 
 
 class SolutionGenerationSettings:
@@ -27,32 +33,6 @@ class SolutionGenerationSettings:
         self.seconds_limit = seconds_limit
         # In case generation is aborted.
         self.cancel = False
-
-
-def get_too_easy(numbers: list[int]) -> set[int]:
-    """
-    A number is too easy to get if it is possible to get with
-    3 or less smaller numbers. Easy numbers will not be generated.
-    """
-    too_easy = set()
-    for count in range(2, 4):
-        parentheses_positions = generate_parentheses_positions(count)
-        for perm in itertools.permutations(numbers, count):
-            add(perm, parentheses_positions, too_easy)
-    return too_easy
-
-
-def get_valid(numbers: list[int]) -> set[int]:
-    """
-    A number is valid if it is possible to get with only 4/7 numbers
-    using +/-/*/().
-    Humans are not computers so some leeway must be allowed.
-    """
-    valid = set()
-    parentheses_positions = generate_parentheses_positions(4)
-    for perm in itertools.permutations(numbers, 4):
-        add(perm, parentheses_positions, valid)
-    return valid
 
 
 def get_starting_positions(numbers: list[int]) -> tuple[list]:
@@ -129,55 +109,6 @@ def check_to_evaluate(operators: tuple[str], parts: list[str]) -> bool:
     return True
 
 
-def add(
-    numbers: list[int], parentheses_positions: list[list],
-    to_add: set[int]) -> None:
-    """
-    Evaluates numbers using all possible operator positions
-    (Cartesian product), and adds then to a particular set.
-    """
-    start, start_number_indexes, start_operator_indexes = (
-        get_starting_positions(numbers))
-
-    operators_product = tuple(
-        itertools.product("+-*", repeat=len(numbers) - 1))
-
-    for operators in operators_product:
-        for i, operator in zip(start_operator_indexes, operators):
-            start[i] = operator
-        check_to_add(start, to_add)
-
-    for positions in parentheses_positions:
-        current = [*start]
-        number_indexes = [*start_number_indexes]
-        operator_indexes = [*start_operator_indexes]
-
-        for p in positions:
-            result = add_parentheses(
-                p, current, number_indexes, operator_indexes, len(numbers),
-                operators_product=operators_product)
-            if result:
-                to_add |= result
-
-        for operators in operators_product:
-            if not check_to_evaluate(operators, current):
-                continue
-            for i, operator in zip(operator_indexes, operators):
-                current[i] = operator
-            check_to_add(current, to_add)
-
-
-def check_to_add(parts: list[str], to_add: set[int]) -> None:
-    """
-    Joins parts of an expression and evalutes it.
-    If the result is within the possible target number range, add.
-    """
-    expression = "".join(parts)
-    result = evaluate(expression)
-    if 201 <= result <= 999:
-        to_add.add(result)
-
-
 def get_solution(
     numbers: list[int], target: int,
     parentheses_positions: list[list[tuple]],
@@ -221,7 +152,7 @@ def get_solution(
                 return
             result = add_parentheses(
                 p, current, number_indexes, operator_indexes, len(numbers),
-                "target", target, operators_product)
+                target, operators_product)
             if result:
                 return result
 
@@ -238,10 +169,7 @@ def get_solution(
 def add_parentheses(
     to_add: tuple, current: list[str],
     number_indexes: list[int], operator_indexes: list[int],
-    number_count: int,
-    mode: Literal["possible", "target"] = "possible",
-    target: int | None = None,
-    operators_product: tuple[tuple] | None = None) -> set[int] | str | None:
+    number_count: int, target: int, operators_product: tuple[tuple]) -> str:
     """
     Adds required parentheses to an expression.
     Handles nested parentheses recursively.
@@ -267,9 +195,6 @@ def add_parentheses(
     
     if len(to_add) == 3:
         # Nested parentheses
-        if mode == "possible":
-            numbers = set()
-
         for positions in to_add[2]:
             deeper_current = [*current]
             deeper_number_indexes = [*number_indexes]
@@ -282,31 +207,20 @@ def add_parentheses(
 
                 result = add_parentheses(
                     add, deeper_current, deeper_number_indexes,
-                    deeper_operator_indexes, number_count, mode,
+                    deeper_operator_indexes, number_count,
                     target, operators_product)
                 if result:
-                    if mode == "possible":
-                        numbers |= result
-                    else:
-                        return result
+                    return result
 
-            for operators in (operators_product or itertools.product(
-                "+-*/", repeat=number_count - 1
-            )):
+            for operators in operators_product:
                 if not check_to_evaluate(operators, deeper_current):
                     continue
                 for i, operator in zip(deeper_operator_indexes, operators):
                     deeper_current[i] = operator
 
-                if mode == "possible":
-                    check_to_add(deeper_current, numbers)
-                else:
-                    expression = "".join(deeper_current)
-                    if evaluate(expression) == target:
-                        return expression
-
-        if mode == "possible":
-            return numbers
+                expression = "".join(deeper_current)
+                if evaluate(expression) == target:
+                    return expression
 
 
 def generate_parentheses_positions(
@@ -358,15 +272,12 @@ def generate_number(numbers: list[int]) -> int:
     Gets a random suitable number
     from 201-999 for the player to try and get.
     """
-    # Removes too easy numbers from valid numbers.
-    valid = get_valid(numbers) - get_too_easy(numbers)
-    # Removes recently generated numbers.
-    no_recent = valid - set(data.get_recent_numbers())
-    # If no numbers except recent ones are valid,
-    # select any valid number instead.
-    choice = secrets.choice(tuple(no_recent or valid))
-    data.add_recent_number(choice)
-    return choice
+    recent = data.get_recent_numbers()
+    result = genlib.generate_number(
+        (ctypes.c_int * 7)(*numbers),
+        (ctypes.c_int * len(recent))(*recent), len(recent))
+    data.add_recent_number(result)
+    return result
 
 
 def generate_solutions(
