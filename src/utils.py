@@ -1,11 +1,11 @@
 import tkinter as tk
 import os
-from ctypes import c_int, cdll, c_double
+from ctypes import cdll, c_double
 
 
-evallib = cdll.LoadLibrary(
-    f"{os.path.dirname(os.path.abspath(__file__))}/eval.so")
-evallib.eval.restype = c_double
+fast_eval = cdll.LoadLibrary(
+    f"{os.path.dirname(os.path.abspath(__file__))}/generate.so").eval
+fast_eval.restype = c_double
 
 
 def evaluate(expression: str) -> int | float:
@@ -15,7 +15,7 @@ def evaluate(expression: str) -> int | float:
     
     Calls fast corresponding function written in C++
     """
-    result = evallib.eval(expression.encode(), 0, -1)
+    result = fast_eval(expression.encode(), 0, -1)
     if "/" in expression:
         result = round(result, 10)
         return int(result) if result.is_integer() else result
