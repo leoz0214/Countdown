@@ -11,6 +11,13 @@ extern "C" {
     __declspec(dllexport) int generate_number(
         int number_array[7], int recent[], int recent_count
     );
+    __declspec(dllexport) const char* get_solution(
+        int numbers_array[], int number_count,
+        int target, char operators_c_str[], int parentheses_setting
+    );
+    __declspec(dllexport) double eval(
+        char expression[], int first, int last
+    );
 }
 
 
@@ -119,6 +126,16 @@ permutations(std::vector<int> &vector, int length) {
         }
     }
     return result;
+}
+
+
+// Generates a random number from a minimum to maximum.
+int generate_random_number(int minimum, int maximum) {
+    std::random_device device;
+    std::mt19937 rng(device());
+    std::uniform_int_distribution<std::mt19937::result_type>
+        random_generator(minimum, maximum);
+    return random_generator(rng);
 }
 
 
@@ -324,9 +341,8 @@ bool check_to_evaluate(
     int operator_index = 0;
     char add_subtract[3] = "+-";
 
-    int i = -1; // First iteration i will be set to 0.
+    int i = 0;
     for (std::string part : parts) {
-        i++;
         if (part == "(") {
             // New set of parentheses opened.
             opened++;
@@ -364,6 +380,7 @@ bool check_to_evaluate(
             // Increment to the next operator.
             operator_index++;
         }
+        i++;
     }
     return true;
 }
@@ -423,6 +440,7 @@ std::vector<std::vector<Parentheses>> PARENTHESES[8] = {
 // If the result is within the possible target number range, add.
 void check_to_add(std::vector<std::string> &parts, std::set<int> &to_add) {
     std::string expression = join_strings(parts);
+    // Guaranteed to 
     int result = eval((char*) expression.c_str(), 0, -1);
     if (result >= 201 && result <= 999) {
         to_add.insert(result);
@@ -449,7 +467,7 @@ void add_parentheses(
     }
 
     // Closing parentheses
-    current.insert(current.begin() + number_indexes[parentheses.stop] - 1, ")");
+    current.insert(current.begin() + number_indexes[parentheses.stop]-1, ")");
     for (int i = parentheses.stop; i < number_indexes.size(); i++) {
         number_indexes[i]++;
     }
@@ -595,10 +613,173 @@ int generate_number(int number_array[7], int recent[], int recent_count) {
         std::inserter(final_possibilities, final_possibilities.end()));
 
     // Generate random number by index. Uniform probability.
-    std::random_device device;
-    std::mt19937 rng(device());
-    std::uniform_int_distribution<std::mt19937::result_type>
-        random_index_generator(0, final_possibilities.size()-1);
+    return final_possibilities[
+        generate_random_number(0, final_possibilities.size()-1)];
+}
+
+
+// Checks if an expression equals target and returns it if true.
+// Or else, an empty string is returned.
+std::string check_expression_equals_target(
+    std::vector<std::string> parts, long double target
+) {
+    std::string expression = join_strings(parts);
+    long double value = eval((char*) expression.c_str(), 0, -1);
+    if (value >= target - 0.0000000001 && value <= target + 0.0000000001) {
+        return expression;
+    }
+    return "";
+}
+
+
+// For generation of solutions.
+// Adds required parentheses to an expression.
+// Handles nested parentheses recursively.
+std::string add_parentheses(
+    Parentheses &parentheses, std::vector<std::string> &current,
+    std::vector<int> &number_indexes, std::vector<int> &operator_indexes,
+    std::vector<std::string> &operators_product, int target,
+    int parentheses_setting
+) {
+    // Opening parentheses
+    current.insert(current.begin() + number_indexes[parentheses.start], "(");
+    // Shift indexes to the right.
+    for (int i = parentheses.start; i < number_indexes.size(); i++) {
+        number_indexes[i]++;
+    }
+    for (int i = parentheses.start; i < operator_indexes.size(); i++) {
+        operator_indexes[i]++;
+    }
+
+    // Closing parentheses
+    current.insert(current.begin() + number_indexes[parentheses.stop]-1, ")");
+    for (int i = parentheses.stop; i < number_indexes.size(); i++) {
+        number_indexes[i]++;
+    }
+    for (int i = parentheses.stop - 1; i < operator_indexes.size(); i++) {
+        operator_indexes[i]++;
+    }
+
+    if (parentheses_setting && parentheses.stop - parentheses.start >= 3) {
+        // Nested parentheses
+        std::string result;
+        std::vector<std::string> deeper_current;
+        std::vector<int> deeper_number_indexes, deeper_operator_indexes;
+        Parentheses add;
+        for (
+            std::vector<Parentheses> positions
+            : PARENTHESES[parentheses.stop - parentheses.start]
+        ) {
+            deeper_current = current;
+            deeper_number_indexes = number_indexes;
+            deeper_operator_indexes = operator_indexes;
+
+            for (Parentheses p : positions) {
+                add = {
+                    p.start + parentheses.start,
+                    p.stop + parentheses.start};
+                result = add_parentheses(
+                    add, deeper_current, deeper_number_indexes,
+                    deeper_operator_indexes, operators_product,
+                    target, parentheses_setting);
+                if (result != "") {
+                    return result;
+                }
+            }
+
+            for (std::string operators : operators_product) {
+                if (!check_to_evaluate(operators, deeper_current)) {
+                    continue;
+                }
+                for (int i = 0; i < operators.length(); i++) {
+                    deeper_current[deeper_operator_indexes[i]] = operators[i];
+                }
+                result = check_expression_equals_target(deeper_current, target);
+                if (result != "") {
+                    return result;
+                }
+            }
+        }
+    }
+    return "";
+}
+
+
+// Attempts to find a solution for given numbers
+// in that particular order along with the target number,
+// parentheses positions and operators which can be used.
+const char* get_solution(
+    int numbers_array[], int number_count,
+    int target, char operators_c_str[], int parentheses_setting
+) {
+    std::vector<int> numbers;
+    for (int i = 0; i < number_count; i++) {
+        numbers.push_back(numbers_array[i]);
+    }
+    std::string operators = operators_c_str;
+
+    StartParts start_parts = get_starting_positions(numbers);
+    std::vector<std::string> start = start_parts.start;
+    std::vector<int> start_number_indexes = start_parts.start_number_indexes;
+    std::vector<int>
+        start_operator_indexes = start_parts.start_operator_indexes;
     
-    return final_possibilities[random_index_generator(rng)];
+    std::vector<std::string> operators_product = string_product(
+        operators, number_count-1);
+    std::rotate(
+        operators_product.begin(),
+        operators_product.begin() + generate_random_number(
+            0, operators_product.size()-1),
+        operators_product.end());
+    
+    std::string result;
+    
+    for (std::string operators : operators_product) {
+        for (int i = 0; i < operators.length(); i++) {
+            start[start_operator_indexes[i]] = operators[i];
+        }
+        result = check_expression_equals_target(start, target);
+        if (result != "") {
+            return result.c_str();
+        }
+    }
+
+    if (parentheses_setting == -1) {
+        return "";
+    }
+
+    std::vector<std::string> current;
+    std::vector<int> number_indexes, operator_indexes;
+
+    for (
+        std::vector<Parentheses> positions :
+        generate_parentheses_positions(number_count)
+    ) {
+        current = start;
+        number_indexes = start_number_indexes;
+        operator_indexes = start_operator_indexes;
+
+        for (Parentheses p : positions) {
+            result = add_parentheses(
+                p, current, number_indexes, operator_indexes,
+                operators_product, target, parentheses_setting);
+            if (result != "") {
+                return result.c_str();
+            }
+        }
+
+        for (std::string operators : operators_product) {
+            if (!check_to_evaluate(operators, current)) {
+                continue;
+            }
+            for (int i = 0; i < operators.length(); i++) {
+                current[operator_indexes[i]] = operators[i];
+            }
+            result = check_expression_equals_target(current, target);
+            if (result != "") {
+                return result.c_str();
+            }
+        }
+    }
+    return "";
 }
