@@ -3,6 +3,7 @@ import secrets
 import ctypes
 import os
 from timeit import default_timer as timer
+from contextlib import suppress
 
 import data
 
@@ -10,7 +11,6 @@ import data
 genlib = ctypes.cdll.LoadLibrary(
     f"{os.path.dirname(os.path.abspath(__file__))}/generate.so")
 genlib.generate_number.restype = ctypes.c_int
-genlib.get_solution.restype = ctypes.c_char_p
 
 
 class SolutionGenerationSettings:
@@ -73,13 +73,21 @@ def generate_solutions(
         count_choice = secrets.choice(perms)
         choice = secrets.choice(count_choice)
         perms[perms.index(count_choice)].remove(choice)
+        file_number = secrets.choice(range(2 ** 31))
 
         while [] in perms:
             perms.remove([])
 
-        result = genlib.get_solution(
+        genlib.get_solution(
             (ctypes.c_int * len(choice))(*choice), len(choice), target,
-            operators, settings.parentheses_option).decode()
+            operators, settings.parentheses_option, file_number)
+
+        result = None
+        with suppress(FileNotFoundError):
+            with open(f"{file_number}.countdown", encoding="utf8") as f:
+                result = f.read()
+            os.remove(f"{file_number}.countdown")
+
         if result:
             result = result.replace("*", "x").replace("/", "÷")
             solutions.append(result)

@@ -5,15 +5,16 @@
 #include <cmath>
 #include <algorithm>
 #include <random>
+#include <fstream>
 
 
 extern "C" {
     __declspec(dllexport) int generate_number(
         int number_array[7], int recent[], int recent_count
     );
-    __declspec(dllexport) const char* get_solution(
-        int numbers_array[], int number_count,
-        int target, char operators_c_str[], int parentheses_setting
+    __declspec(dllexport) void get_solution(
+        int numbers_array[], int number_count, int target,
+        char operators_c_str[], int parentheses_setting, int file_number
     );
     __declspec(dllexport) double eval(
         char expression[], int first, int last
@@ -440,7 +441,7 @@ std::vector<std::vector<Parentheses>> PARENTHESES[8] = {
 // If the result is within the possible target number range, add.
 void check_to_add(std::vector<std::string> &parts, std::set<int> &to_add) {
     std::string expression = join_strings(parts);
-    // Guaranteed to 
+    // Guaranteed to be integer as no division involved.
     int result = eval((char*) expression.c_str(), 0, -1);
     if (result >= 201 && result <= 999) {
         to_add.insert(result);
@@ -705,12 +706,21 @@ std::string add_parentheses(
 }
 
 
+// Writes the solution to a file.
+void write_solution(std::string solution, int file_number) {
+    std::string filename = std::to_string(file_number) + ".countdown";
+    std::ofstream file(filename);
+    file << solution;
+    file.close();
+}
+
+
 // Attempts to find a solution for given numbers
 // in that particular order along with the target number,
 // parentheses positions and operators which can be used.
-const char* get_solution(
-    int numbers_array[], int number_count,
-    int target, char operators_c_str[], int parentheses_setting
+void get_solution(
+    int numbers_array[], int number_count, int target,
+    char operators_c_str[], int parentheses_setting, int file_number
 ) {
     std::vector<int> numbers;
     for (int i = 0; i < number_count; i++) {
@@ -740,12 +750,13 @@ const char* get_solution(
         }
         result = check_expression_equals_target(start, target);
         if (result != "") {
-            return result.c_str();
+            write_solution(result, file_number);
+            return;
         }
     }
 
     if (parentheses_setting == -1) {
-        return "";
+        return;
     }
 
     std::vector<std::string> current;
@@ -764,7 +775,8 @@ const char* get_solution(
                 p, current, number_indexes, operator_indexes,
                 operators_product, target, parentheses_setting);
             if (result != "") {
-                return result.c_str();
+                write_solution(result, file_number);
+                return;
             }
         }
 
@@ -777,9 +789,9 @@ const char* get_solution(
             }
             result = check_expression_equals_target(current, target);
             if (result != "") {
-                return result.c_str();
+                write_solution(result, file_number);
+                return;
             }
         }
     }
-    return "";
 }
