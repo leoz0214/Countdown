@@ -69,7 +69,7 @@ def generate_solutions(
         for count in range(
             settings.min_number_count, settings.max_number_count + 1)]
     operators = ctypes.c_char_p(settings.operators.encode())
-    
+
     while (
         timer() - start < settings.seconds_limit
         and perms and len(solutions) < settings.max_solution_count

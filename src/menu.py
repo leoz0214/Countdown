@@ -3,6 +3,7 @@ from collections import namedtuple
 
 import game
 import stats
+import history
 import data
 import level
 from colours import *
@@ -53,6 +54,13 @@ class MainMenu(tk.Frame):
         """
         self.destroy()
         stats.StatisticsWindow(self.root).pack()
+    
+    def history(self) -> None:
+        """
+        Opens history.
+        """
+        self.destroy()
+        history.HistoryWindow(self.root).pack()
 
 
 class CurrentWinStreakLabel(tk.Label):
@@ -96,7 +104,8 @@ class MainMenuNavigationFrame(tk.Frame):
             bg=ORANGE, activebackground=GREEN, width=15, border=3)
         self.history_button = tk.Button(
             self, font=ink_free(15), text="History",
-            bg=ORANGE, activebackground=GREEN, width=15, border=3)
+            bg=ORANGE, activebackground=GREEN, width=15, border=3,
+            command=master.history)
         self.options_button = tk.Button(
             self, font=ink_free(15), text="Options",
             bg=ORANGE, activebackground=GREEN, width=15, border=3)

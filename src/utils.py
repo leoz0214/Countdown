@@ -1,5 +1,6 @@
 import tkinter as tk
 import os
+import datetime
 from ctypes import cdll, c_double
 
 
@@ -60,3 +61,15 @@ def bool_to_state(expression: bool) -> str:
     else 'disabled'.
     """
     return "normal" if expression else "disabled"
+
+
+def epoch_to_strftime(epoch: float) -> str:
+    """
+    Converts seconds since epoch to the corresponding
+    human readable time (system time zone).
+
+    The ISO 8601 format YYYY-MM-DD is used for date,
+    and time is in HH:MM:SS.
+    """
+    return datetime.datetime.fromtimestamp(epoch).strftime(
+        "%Y-%m-%d %H:%M:%S")
