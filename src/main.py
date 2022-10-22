@@ -21,6 +21,7 @@ def main() -> None:
     """
     Main function of the program.
     """
+    data.remove_temp_folder()
     # Only allows one instance of the main program to be run at any time.
     # Prevents the risks of race conditions, especially during IO.
     # Defensive.
