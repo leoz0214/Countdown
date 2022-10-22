@@ -14,7 +14,7 @@ extern "C" {
     );
     __declspec(dllexport) void get_solution(
         int numbers_array[], int number_count, int target,
-        char operators_c_str[], int parentheses_setting, int file_number
+        char operators_c_str[], int parentheses_setting, char filename[]
     );
     __declspec(dllexport) double eval(
         char expression[], int first, int last
@@ -707,8 +707,7 @@ std::string add_parentheses(
 
 
 // Writes the solution to a file.
-void write_solution(std::string solution, int file_number) {
-    std::string filename = std::to_string(file_number) + ".countdown";
+void write_solution(std::string solution, char filename[]) {
     std::ofstream file(filename);
     file << solution;
     file.close();
@@ -720,7 +719,7 @@ void write_solution(std::string solution, int file_number) {
 // parentheses positions and operators which can be used.
 void get_solution(
     int numbers_array[], int number_count, int target,
-    char operators_c_str[], int parentheses_setting, int file_number
+    char operators_c_str[], int parentheses_setting, char filename[]
 ) {
     std::vector<int> numbers;
     for (int i = 0; i < number_count; i++) {
@@ -750,7 +749,7 @@ void get_solution(
         }
         result = check_expression_equals_target(start, target);
         if (result != "") {
-            write_solution(result, file_number);
+            write_solution(result, filename);
             return;
         }
     }
@@ -775,7 +774,7 @@ void get_solution(
                 p, current, number_indexes, operator_indexes,
                 operators_product, target, parentheses_setting);
             if (result != "") {
-                write_solution(result, file_number);
+                write_solution(result, filename);
                 return;
             }
         }
@@ -789,7 +788,7 @@ void get_solution(
             }
             result = check_expression_equals_target(current, target);
             if (result != "") {
-                write_solution(result, file_number);
+                write_solution(result, filename);
                 return;
             }
         }

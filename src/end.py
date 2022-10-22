@@ -123,8 +123,7 @@ def get_xp_earned(solution: str | None) -> tuple[int, list[str]]:
             else:
                 currently_in_number = False
 
-        numbers_used_multiplier = NUMBERS_USED_XP_MULTIPLIER.get(
-            numbers_used)
+        numbers_used_multiplier = NUMBERS_USED_XP_MULTIPLIER.get(numbers_used)
         if numbers_used_multiplier is not None:
             # Multiply XP by a factor if 5 or more numbers used.
             xp_earned *= numbers_used_multiplier
@@ -475,15 +474,17 @@ class SolutionsFrame(tk.Frame):
             if state.get()).replace("x", "*").replace("÷", "/")
         seconds_limit = options.seconds_limit_frame.seconds.get()
             
-        self.settings = generate.SolutionGenerationSettings(
+        settings = generate.SolutionGenerationSettings(
             min_number_count, max_number_count, max_solution_count,
             nested_parentheses, operators, seconds_limit
         )
+        self.settings = settings
         result = generate.generate_solutions(
-            self.numbers, self.target, self.settings)
-        if not self.settings.cancel:
-            self.navigation_frame.reset_generate_button()
-        self.settings = None
+            self.numbers, self.target, settings)
+        if settings.cancel:
+            return
+        
+        self.navigation_frame.reset_generate_button()
         
         if result:
             self.solutions_listbox.insert(0, *result)
@@ -496,6 +497,7 @@ class SolutionsFrame(tk.Frame):
         Cancels generation.
         """
         self.settings.cancel = True
+        self.settings = None
         self.navigation_frame.reset_generate_button()
 
 

@@ -2,10 +2,14 @@ import itertools
 import secrets
 import ctypes
 import os
+import string
 from timeit import default_timer as timer
 from contextlib import suppress
 
 import data
+
+
+POSSIBLE_SOLUTION_FILENAME_CHARACTERS = string.digits + string.ascii_lowercase
 
 
 genlib = ctypes.cdll.LoadLibrary(
@@ -59,7 +63,7 @@ def generate_solutions(
         return []
     start = timer()
     solutions = []
-    # Uniform probability for n numbers.
+    # Uniform probability for n numbers to be tried.
     perms = [
         list(itertools.permutations(numbers, count))
         for count in range(
@@ -73,20 +77,24 @@ def generate_solutions(
         count_choice = secrets.choice(perms)
         choice = secrets.choice(count_choice)
         perms[perms.index(count_choice)].remove(choice)
-        file_number = secrets.choice(range(2 ** 31))
+        file_chars = "".join(
+            secrets.choice(POSSIBLE_SOLUTION_FILENAME_CHARACTERS)\
+            for _ in range(16))
+        filename = f"{data.TEMPORARY_FOLDER}/{file_chars}"
 
         while [] in perms:
             perms.remove([])
 
+        data.create_temp_folder()
         genlib.get_solution(
             (ctypes.c_int * len(choice))(*choice), len(choice), target,
-            operators, settings.parentheses_option, file_number)
+            operators, settings.parentheses_option, filename.encode())
 
         result = None
         with suppress(FileNotFoundError):
-            with open(f"{file_number}.countdown", encoding="utf8") as f:
+            with open(filename, encoding="utf8") as f:
                 result = f.read()
-            os.remove(f"{file_number}.countdown")
+            os.remove(filename)
 
         if result:
             result = result.replace("*", "x").replace("/", "÷")

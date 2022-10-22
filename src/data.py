@@ -32,6 +32,7 @@ SECONDS_PLAYED_FILE = f"{STATS_FOLDER}/time.dat"
 OPERATORS_USED_FILE = f"{STATS_FOLDER}/operators.json"
 
 GAME_DATA_FOLDER = f"{FOLDER}/game_data"
+TEMPORARY_FOLDER = f"{FOLDER}/temp"
 
 MAX_RECENT_NUMBERS_COUNT = 25
 # Split game data into multiple files, so only a fairly small chunk
@@ -358,3 +359,20 @@ def add_game_data(new_data: dict) -> None:
     except Exception:
         # Corruption
         shutil.rmtree(GAME_DATA_FOLDER)
+
+
+@check_folder_exists()
+@check_folder_exists(TEMPORARY_FOLDER)
+def create_temp_folder() -> None:
+    """
+    Creates the temporary folder, if it does not already exist.
+    """
+    return
+
+
+def remove_temp_folder() -> None:
+    """
+    Deletes the temporary folder, if it exists.
+    """
+    with suppress(FileNotFoundError):
+        shutil.rmtree(TEMPORARY_FOLDER)

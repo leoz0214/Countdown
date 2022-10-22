@@ -176,7 +176,8 @@ class SmallNumbersFrame(tk.Frame):
     """
 
     def __init__(self, master: SelectNumbersFrame) -> None:
-        super().__init__(master)
+        super().__init__(master, width=1000, height=100)
+        self.pack_propagate(False)
         self.master = master
 
         possible = list(range(2, 10))
@@ -189,7 +190,7 @@ class SmallNumbersFrame(tk.Frame):
         
         self.info_label = tk.Label(
             self, font=ink_free(25, True), text="Small numbers (2-9):",
-            justify="left")
+            width=25, justify="left")
         
         self.buttons = [
             tk.Button(
@@ -199,7 +200,7 @@ class SmallNumbersFrame(tk.Frame):
         
         self.info_label.pack(side="left")
         for button in self.buttons:
-            button.pack(padx=10, side="right")
+            button.pack(padx=10, side="left")
     
     def select(self) -> None:
         """
@@ -208,9 +209,6 @@ class SmallNumbersFrame(tk.Frame):
         self.master.add_number(self.numbers.pop())
         self.buttons.pop().destroy()
 
-        if not self.numbers:
-            self.destroy()
-
 
 class BigNumbersFrame(tk.Frame):
     """
@@ -218,7 +216,8 @@ class BigNumbersFrame(tk.Frame):
     """
 
     def __init__(self, master: SelectNumbersFrame) -> None:
-        super().__init__(master)
+        super().__init__(master, width=1000, height=100)
+        self.pack_propagate(False)
         self.master = master
 
         possible = [25, 50, 75, 100] * 2
@@ -229,7 +228,7 @@ class BigNumbersFrame(tk.Frame):
             possible.remove(selected)
 
         self.info_label = tk.Label(
-            self, font=ink_free(25, True),
+            self, font=ink_free(25, True), width=25,
             text="Big numbers (25, 50, 75, 100):", justify="left")
         
         self.buttons = [
@@ -240,7 +239,7 @@ class BigNumbersFrame(tk.Frame):
         
         self.info_label.pack(side="left")
         for button in self.buttons:
-            button.pack(padx=10, side="right")
+            button.pack(padx=10, side="left")
     
     def select(self) -> None:
         """
@@ -248,9 +247,6 @@ class BigNumbersFrame(tk.Frame):
         """
         self.master.add_number(self.numbers.pop())
         self.buttons.pop().destroy()
-
-        if not self.numbers:
-            self.destroy()
 
 
 class SelectNumbersNavigationFrame(tk.Frame):
@@ -325,8 +321,8 @@ class CountdownFrame(tk.Frame):
         self.countdown_clock = CountdownClock(self)
 
         self.target_number_label.pack(padx=25, pady=15)
-        self.selected_numbers_frame.pack(padx=10, pady=10)
-        self.countdown_clock.pack(padx=10, pady=10)
+        self.selected_numbers_frame.pack(padx=10, pady=15)
+        self.countdown_clock.pack(padx=10, pady=15)
     
     def count_down(self, first: bool = False) -> None:
         """
@@ -342,7 +338,7 @@ class CountdownFrame(tk.Frame):
             time_passed = timer() - self.start_time
             # Refresh the clock.
             self.countdown_clock = CountdownClock(self, time_passed)
-            self.countdown_clock.pack(padx=10, pady=10)
+            self.countdown_clock.pack(padx=10, pady=15)
         self.after(COUNTDOWN_REFRESH_RATE_MS, self.count_down)
 
 
@@ -672,8 +668,7 @@ class EnterSolutionFrame(tk.Frame):
             button.config(
                 state=bool_to_state(
                     button.cget("text").isdigit()
-                    or button.cget("text") == "("),
-                disabledforeground=RED)
+                    or button.cget("text") == "("), disabledforeground=RED)
 
         self.option_buttons.reset_button.config(state="disabled")
         self.option_buttons.submit_button.config(state="disabled")
