@@ -1,3 +1,7 @@
+"""
+The main module of the application.
+This is the file that is run for the application to start.
+"""
 import tkinter as tk
 from tkinter import messagebox
 import sys
@@ -9,12 +13,11 @@ import menu
 import game
 import end
 import data
-import audio
-from font import ink_free
 from colours import *
+from utils import get_sfx, ink_free
 
 
-ERROR_SFX = [audio.get_sfx(f"error{n}.wav") for n in range(1, 3)]
+ERROR_SFX = [get_sfx(f"error{n}.wav") for n in range(1, 3)]
 
 
 def main() -> None:

@@ -1,3 +1,6 @@
+"""
+The main menu which leads to different parts of the game.
+"""
 import tkinter as tk
 from collections import namedtuple
 
@@ -7,7 +10,7 @@ import history
 import data
 import level
 from colours import *
-from font import ink_free
+from utils import ink_free
 
 
 TieredStatistic = namedtuple("TieredStatistic", "bronze silver gold platinum")

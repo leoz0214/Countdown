@@ -1,8 +1,11 @@
+"""
+Supports level functionality.
+"""
 import tkinter as tk
 
 import data
-from font import ink_free
 from colours import *
+from utils import ink_free
 
 
 MAX_LEVEL = 100

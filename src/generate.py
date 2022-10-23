@@ -1,3 +1,6 @@
+"""
+Interacts with generation C++ module.
+"""
 import itertools
 import secrets
 import ctypes
@@ -78,7 +81,7 @@ def generate_solutions(
         choice = secrets.choice(count_choice)
         perms[perms.index(count_choice)].remove(choice)
         file_chars = "".join(
-            secrets.choice(POSSIBLE_SOLUTION_FILENAME_CHARACTERS)\
+            secrets.choice(POSSIBLE_SOLUTION_FILENAME_CHARACTERS)
             for _ in range(16))
         filename = f"{data.TEMPORARY_FOLDER}/{file_chars}"
 

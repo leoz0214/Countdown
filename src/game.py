@@ -1,5 +1,7 @@
+"""
+Module of the main game itself.
+"""
 import tkinter as tk
-from tkinter import messagebox
 import secrets
 import math
 import itertools
@@ -9,21 +11,20 @@ from timeit import default_timer as timer
 import menu
 import end
 import generate
-import audio
-from utils import draw_circle, evaluate, bool_to_state
+from utils import (
+    draw_circle, evaluate, bool_to_state, get_sfx, get_music, ink_free)
 from colours import *
-from font import ink_free
 
 
 NUMBER_COUNT = 7
 MAX_SMALL_COUNT = MAX_BIG_COUNT = 5
 
-SELECT_SFX = audio.get_sfx("select.wav")
-COUNT_SFX = audio.get_sfx("count.wav")
-GO_SFX = audio.get_sfx("go.wav")
-INCORRECT_SOLUTION_SFX = audio.get_sfx("incorrect.mp3")
-CORRECT_SOLUTION_SFX = audio.get_sfx("correct.mp3")
-COUNTDOWN_MUSIC = audio.get_music("countdown.wav")
+SELECT_SFX = get_sfx("select.wav")
+COUNT_SFX = get_sfx("count.wav")
+GO_SFX = get_sfx("go.wav")
+INCORRECT_SOLUTION_SFX = get_sfx("incorrect.mp3")
+CORRECT_SOLUTION_SFX = get_sfx("correct.mp3")
+COUNTDOWN_MUSIC = get_music("countdown.wav")
 
 SHUFFLES_BEFORE_REAL_NUMBER = 25
 SHUFFLE_DELAY_MS = 50

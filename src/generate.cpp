@@ -1,3 +1,7 @@
+/*
+Fast module which allows random target number generation
+along with solution generation.
+*/
 #include <vector>
 #include <string>
 #include <set>
