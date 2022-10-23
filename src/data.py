@@ -1,3 +1,6 @@
+"""
+Handling of application data.
+"""
 import os
 import gzip
 import shutil

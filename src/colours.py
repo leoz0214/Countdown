@@ -1,3 +1,6 @@
+"""
+Colour constants to be used throughout the application.
+"""
 BRONZE = "#cd7f32"
 SILVER = "#c0c0c0"
 GOLD = "#ffd700"

@@ -1,11 +1,15 @@
+"""
+Displays recent games and allows the player to view their data
+and also generate solutions for the recent games.
+"""
 import tkinter as tk
 
 import menu
 import data
 import game
-from font import ink_free
+import solutions
 from colours import *
-from utils import epoch_to_strftime
+from utils import epoch_to_strftime, ink_free
 
 
 MAX_SOLUTION_DISPLAY_LENGTH = 36
@@ -23,22 +27,33 @@ class HistoryWindow(tk.Frame):
         super().__init__(root)
         self.root = root
         self.root.title("Countdown - History")
-        self.recent_games = data.get_game_data()[-1000:]
-        self.recent_game_frame = None
+        self.recent_games = data.get_game_data()[-data.MAX_ALLOWED_GAME_DATA:]
 
         self.title_label = tk.Label(
             self, font=ink_free(50, True), text="History")
-
-        self.recent_games_frame = RecentGamesFrame(self)
-        
         self.back_button = tk.Button(
-            self, font=ink_free(25), text="Back", width=10, border=5,
+            self, font=ink_free(15), text="Back", width=10, border=5,
             bg=ORANGE, activebackground=RED, command=self.back)
-        
-        self.title_label.grid(row=0, padx=10, pady=5)
-        self.recent_games_frame.grid(row=1, padx=10, pady=5)
-        self.back_button.grid(row=3, padx=10, pady=5)
-    
+
+        if self.recent_games:
+            self.recent_game_frame = None
+            self.solutions_frame = None
+
+            self.recent_games_frame = RecentGamesFrame(self)
+            
+            self.title_label.grid(row=0, padx=10)
+            self.recent_games_frame.grid(row=1, padx=10, pady=5)
+            self.back_button.grid(row=3, padx=10, pady=5)
+        else:
+            self.message_label = tk.Label(
+                self, font=ink_free(75),
+                text="No history yet!\nPlay a round!", fg=RED)
+            self.back_button.config(font=ink_free(25))
+            
+            self.title_label.pack(padx=100, pady=25)
+            self.message_label.pack(padx=100, pady=25)
+            self.back_button.pack(padx=100, pady=25)
+
     def select_game(self) -> None:
         """
         Get current game selection and display its data.
@@ -48,8 +63,42 @@ class HistoryWindow(tk.Frame):
         current_game = self.recent_games[-current_index-1]
         if self.recent_game_frame:
             self.recent_game_frame.destroy()
+        if self.solutions_frame:
+            self.solutions_frame.destroy()
         self.recent_game_frame = GameDataLabelFrame(self, current_game)
+        self.solutions_frame = solutions.SolutionsFrame(
+            self.root, self, current_game["numbers"], current_game["target"])
         self.recent_game_frame.grid(row=2, padx=10, pady=5)
+
+    def solutions(self) -> None:
+        """
+        Allows the player to generate solutions for the past game.
+        """
+        self.pack_forget()
+        self.solutions_frame.pack()
+        self.root.title("Countdown - History - Solutions")
+    
+    def exit_solutions(self) -> None:
+        """
+        Returns to the main game over screen upon
+        leaving solution generation.
+        """
+        solutions.SOLUTION_FOUND_SFX.stop()
+        solutions.NO_SOLUTION_FOUND_SFX.stop()
+        if self.solutions_frame.settings:
+            self.solutions_frame.cancel()
+        self.solutions_frame.pack_forget()
+        self.root.title("Countdown - History")
+        self.pack()
+    
+    def close(self) -> None:
+        """
+        Deselects the current recent game from the listbox
+        and destroys the data label frame.
+        """
+        self.recent_games_frame.listbox.select_clear(0, "end")
+        self.recent_game_frame.destroy()
+        self.solutions_frame.destroy()
     
     def back(self) -> None:
         """
@@ -103,11 +152,13 @@ class GameDataLabelFrame(tk.LabelFrame):
         self.target_number_label = game.TargetNumberLabel(
             self, game_data["target"])
         self.stats_frame = GameDataStatsFrame(self)
+        self.navigation_frame = GameDataNavigationFrame(self)
         
         self.selected_numbers_frame.grid(
-            row=0, column=0, columnspan=3, padx=10, pady=5)
-        self.target_number_label.grid(row=1, column=0, padx=10, pady=5)
-        self.stats_frame.grid(row=1, column=1, padx=10, pady=5)
+            row=0, column=0, columnspan=2, padx=10, pady=5)
+        self.target_number_label.grid(row=1, rowspan=2, column=0, padx=10)
+        self.stats_frame.grid(row=1, column=1, columnspan=2, padx=10, pady=5)
+        self.navigation_frame.grid(row=2, column=1, padx=10, pady=5)
 
 
 class GameDataStatsFrame(tk.Frame):
@@ -165,3 +216,22 @@ class XpSourcesFrame(tk.Frame):
 
         self.listbox.pack(side="left")
         self.scrollbar.pack(side="right", fill="y")
+
+
+class GameDataNavigationFrame(tk.Frame):
+    """
+    Navigation for the game data label frame.
+    """
+
+    def __init__(self, master: GameDataLabelFrame) -> None:
+        super().__init__(master)
+        self.close_button = tk.Button(
+            self, font=ink_free(20), text="Close", width=15, border=5,
+            bg=ORANGE, activebackground=RED, command=master.master.close)
+        self.solutions_button = tk.Button(
+            self, font=ink_free(20), text="Solutions", width=15, border=5,
+            bg=ORANGE, activebackground=GREEN,
+            command=master.master.solutions)
+        
+        self.close_button.pack(padx=10, side="left")
+        self.solutions_button.pack(padx=10, side="right")

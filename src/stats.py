@@ -1,3 +1,6 @@
+"""
+Displays statistics of gameplay to the player.
+"""
 import tkinter as tk
 import time
 
@@ -5,8 +8,7 @@ import menu
 import data
 import level
 from colours import *
-from font import ink_free
-from utils import days_to_seconds, seconds_to_hhmmss, bool_to_state
+from utils import days_to_seconds, seconds_to_hhmmss, bool_to_state, ink_free
 
 
 OPERATORS = "+-x÷"

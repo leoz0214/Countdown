@@ -1,12 +1,31 @@
+"""
+Utility functions for the rest of the application.
+"""
 import tkinter as tk
 import os
 import datetime
 from ctypes import cdll, c_double
 
+from pygame import mixer
+
 
 fast_eval = cdll.LoadLibrary(
     f"{os.path.dirname(os.path.abspath(__file__))}/generate.so").eval
 fast_eval.restype = c_double
+
+mixer.init()
+
+
+def ink_free(size: int, bold: bool = False, italic: bool = False) -> tuple:
+    """
+    Utility function for 'Ink Free' font.
+    """
+    font = ("Ink Free", size)
+    if bold:
+        font += ("bold",)
+    if italic:
+        font += ("italic",)
+    return font
 
 
 def evaluate(expression: str) -> int | float:
@@ -73,3 +92,21 @@ def epoch_to_strftime(epoch: float) -> str:
     """
     return datetime.datetime.fromtimestamp(epoch).strftime(
         "%Y-%m-%d %H:%M:%S")
+
+
+def get_sfx(filename: str) -> mixer.Sound:
+    """
+    Fetches the SFX with a particular filename,
+    returning a pygame Sound object.
+    Path not required, just the name of the file.
+    """
+    return mixer.Sound(f"./audio/sfx/{filename}")
+
+
+def get_music(filename: str) -> mixer.Sound:
+    """
+    Fetches the music with a particular filename,
+    returning a pygame Sound object.
+    Path not required, just the name of the file.
+    """
+    return mixer.Sound(f"./audio/music/{filename}")
