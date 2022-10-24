@@ -6,6 +6,7 @@ from collections import namedtuple
 
 import game
 import stats
+import achievements
 import history
 import data
 import level
@@ -64,6 +65,13 @@ class MainMenu(tk.Frame):
         """
         self.destroy()
         history.HistoryWindow(self.root).pack()
+    
+    def achievements(self) -> None:
+        """
+        Opens achievements.
+        """
+        self.destroy()
+        achievements.AchievementsWindow(self.root).pack()
 
 
 class CurrentWinStreakLabel(tk.Label):
@@ -104,7 +112,8 @@ class MainMenuNavigationFrame(tk.Frame):
             command=master.statistics)
         self.achievements_button = tk.Button(
             self, font=ink_free(15), text="Achievements",
-            bg=ORANGE, activebackground=GREEN, width=15, border=3)
+            bg=ORANGE, activebackground=GREEN, width=15, border=3,
+            command=master.achievements)
         self.history_button = tk.Button(
             self, font=ink_free(15), text="History",
             bg=ORANGE, activebackground=GREEN, width=15, border=3,

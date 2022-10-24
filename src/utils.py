@@ -16,6 +16,11 @@ fast_eval.restype = c_double
 mixer.init()
 
 
+AUDIO_FOLDER = "./audio"
+MUSIC_FOLDER = f"{AUDIO_FOLDER}/music"
+SFX_FOLDER = f"{AUDIO_FOLDER}/sfx"
+
+
 def ink_free(size: int, bold: bool = False, italic: bool = False) -> tuple:
     """
     Utility function for 'Ink Free' font.
@@ -100,7 +105,7 @@ def get_sfx(filename: str) -> mixer.Sound:
     returning a pygame Sound object.
     Path not required, just the name of the file.
     """
-    return mixer.Sound(f"./audio/sfx/{filename}")
+    return mixer.Sound(f"{SFX_FOLDER}/{filename}")
 
 
 def get_music(filename: str) -> mixer.Sound:
@@ -109,4 +114,4 @@ def get_music(filename: str) -> mixer.Sound:
     returning a pygame Sound object.
     Path not required, just the name of the file.
     """
-    return mixer.Sound(f"./audio/music/{filename}")
+    return mixer.Sound(f"{MUSIC_FOLDER}/{filename}")
