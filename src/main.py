@@ -35,6 +35,7 @@ def main() -> None:
         existing_instance()
     else:
         launch()
+        data.remove_temp_folder()
 
 
 def launch() -> None:
