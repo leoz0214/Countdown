@@ -16,6 +16,7 @@ except ImportError:
     import json
 
 from utils import days_to_seconds
+from achievements import SPECIAL_ACHIEVEMENTS
 
 
 OPERATORS = "+-x÷"
@@ -23,6 +24,7 @@ OPERATORS = "+-x÷"
 FOLDER = "./data"
 STREAK_FILE = f"{FOLDER}/streak.dat"
 RECENT_NUMBERS_FILE = f"{FOLDER}/recent_numbers.json"
+SPECIAL_ACHIEVEMENTS_FILE = f"{FOLDER}/achievements.json"
 
 STATS_FOLDER = f"{FOLDER}/stats"
 XP_FILE = f"{STATS_FOLDER}/xp.dat"
@@ -362,6 +364,58 @@ def add_game_data(new_data: dict) -> None:
     except Exception:
         # Corruption
         shutil.rmtree(GAME_DATA_FOLDER)
+
+
+@check_folder_exists()
+def get_special_achievements() -> dict[str, str]:
+    """
+    Gets the status of special achievements.
+    If a special achievement is complete, it will have a value of True,
+    else False.
+    """
+    try:
+        with open(SPECIAL_ACHIEVEMENTS_FILE, "r", encoding="utf8") as f:
+            special_achievements = json.load(f)
+        
+        # Checks data is as expected.
+        if not isinstance(special_achievements, dict):
+            raise ValueError
+        if len(special_achievements) != len(SPECIAL_ACHIEVEMENTS):
+            raise ValueError
+        # Checks keys are correct and values are all booleans.
+        if any(
+            actual_key != expected_key
+            or not isinstance(special_achievements[actual_key], bool)
+            for actual_key, expected_key in zip(
+                special_achievements, SPECIAL_ACHIEVEMENTS
+            )
+        ):
+            raise ValueError
+        return special_achievements
+    except (FileNotFoundError, ValueError):
+        # File does not exist or is corrupt.
+        # Reset all special achievements to unachieved.
+        initial_special_achievements = {
+            key: False for key in SPECIAL_ACHIEVEMENTS
+        }
+        with open(SPECIAL_ACHIEVEMENTS_FILE, "w", encoding="utf8") as f:
+            json.dump(initial_special_achievements, f)
+        return initial_special_achievements
+
+
+@check_folder_exists()
+def complete_special_achievement(key: str) -> bool:
+    """
+    Sets a special achievement to True if not already.
+    Returns True if the change was made, else False
+    """
+    special_achievements = get_special_achievements()
+    if special_achievements[key]:
+        return False
+    special_achievements[key] = True
+    with open(SPECIAL_ACHIEVEMENTS_FILE, "w", encoding="utf8") as f:
+        json.dump(special_achievements, f)
+    return True
 
 
 @check_folder_exists()

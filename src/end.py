@@ -9,8 +9,10 @@ import game
 import data
 import level
 import solutions
+import stats
 from colours import *
-from utils import get_sfx, ink_free
+from utils import get_sfx, ink_free, days_to_seconds
+from achievements import format_achievement, format_special_achievement
 
 
 OPERATORS = "+-x÷"
@@ -89,8 +91,7 @@ def get_xp_earned(solution: str | None) -> tuple[int, list[str]]:
                 xp_earned += earned
                 xp_sources.append(
                     "{} operator x{} (+{}XP)".format(
-                        operator, count, earned
-                    ))
+                        operator, count, earned))
         
         if all(operator in solution for operator in "+-x÷"):
             # Bonus for using all operators.
@@ -113,8 +114,7 @@ def get_xp_earned(solution: str | None) -> tuple[int, list[str]]:
             xp_earned *= numbers_used_multiplier
             xp_sources.append(
                 "{} numbers used (x{})".format(
-                    numbers_used, numbers_used_multiplier
-                ))
+                    numbers_used, numbers_used_multiplier))
 
         # Apply Streak XP multiplier. Only apply the biggest one.
         for required_streak, multiplier in sorted(
@@ -126,13 +126,54 @@ def get_xp_earned(solution: str | None) -> tuple[int, list[str]]:
                 xp_earned *= multiplier
                 xp_sources.append(
                     "Win streak {} or above (x{})".format(
-                        required_streak, multiplier
-                    ))
+                        required_streak, multiplier))
                 break
         
         xp_earned = int(round(xp_earned, 10))
     
     return xp_earned, xp_sources
+
+
+def get_special_achievements_earned(game_data: "GameData") -> list[str]:
+    """
+    Checks for any special achievements earned and returns
+    any achievements earned.
+    """
+    earned = []
+    games = data.get_game_data()
+
+    games_played_last_24_hours = len(
+        stats.filter_by_time(games, days_to_seconds(1)))
+    if games_played_last_24_hours >= 40:
+        if data.complete_special_achievement("obsession"):
+            earned.append(format_special_achievement("obsession"))
+
+    games_played_last_7_days = len(
+        stats.filter_by_time(games, days_to_seconds(7)))
+    if games_played_last_7_days >= 250:
+        if data.complete_special_achievement("addiction"):
+            earned.append(format_special_achievement("addiction"))
+    
+    if game_data.small_numbers == 5 and game_data.big_numbers == 0:
+        if data.complete_special_achievement("small_numbers"):
+            earned.append(format_special_achievement("small_numbers"))
+    elif game_data.big_numbers == 5 and game_data.small_numbers == 0:
+        if data.complete_special_achievement("big_numbers"):
+            earned.append(format_special_achievement("big_numbers"))
+    elif game_data.big_numbers + game_data.small_numbers == 7:
+        if data.complete_special_achievement("all_numbers"):
+            earned.append(format_special_achievement("all_numbers"))
+    
+    if min(game_data.operator_counts.values()) > 0:
+        # All operators used.
+        if data.complete_special_achievement("all_operators"):
+            earned.append(format_special_achievement("all_operators"))
+    elif tuple(game_data.operator_counts.values()).count(0) == 3:
+        # Only one operator used.
+        if data.complete_special_achievement("one_operator"):
+            earned.append(format_special_achievement("one_operator"))      
+    
+    return earned
 
 
 class GameData:
@@ -193,9 +234,8 @@ class GameEnd(tk.Frame):
     """
 
     def __init__(
-        self, root: tk.Tk, solution: str | None,
-        numbers: list[int], target: int,
-        start_time: float, stop_time: float) -> None:
+        self, root: tk.Tk, solution: str | None, numbers: list[int],
+        target: int, start_time: float, stop_time: float) -> None:
 
         super().__init__(root)
         self.root = root
@@ -227,6 +267,9 @@ class GameEnd(tk.Frame):
         level_before = level.Level().level
         total_xp_before = data.get_total_xp()
         self.new_total_xp = total_xp_before + self.game_data.xp_earned
+
+        special_achievements_earned = get_special_achievements_earned(
+            self.game_data)
 
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Finish")
