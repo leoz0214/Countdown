@@ -2,6 +2,7 @@
 Module of the main game itself.
 """
 import tkinter as tk
+from tkinter import messagebox
 import secrets
 import math
 import itertools
@@ -11,9 +12,11 @@ from timeit import default_timer as timer
 import menu
 import end
 import generate
+import data
 from utils import (
     draw_circle, evaluate, bool_to_state, get_sfx, get_music, ink_free)
 from colours import *
+from achievements import format_special_achievement
 
 
 NUMBER_COUNT = 7
@@ -630,8 +633,7 @@ class EnterSolutionFrame(tk.Frame):
                     button.cget("state") == "disabled"
                     and button.cget("text") == to_remove
                 ):
-                    button.config(state="normal", disabledforeground=RED)
-                    break
+                    button.config(disabledforeground=RED)
         elif to_remove == "(":
             self.opening_parentheses -= 1
         elif to_remove == ")":
@@ -709,6 +711,10 @@ class EnterSolutionFrame(tk.Frame):
             CORRECT_SOLUTION_SFX.play()
             self.master.proceed_to_finish(solution, self.numbers, self.target)
         else:
+            if data.complete_special_achievement("incorrect_solution"):
+                messagebox.showinfo(
+                    "Achievement!",
+                    format_special_achievement("incorrect_solution"))
             INCORRECT_SOLUTION_SFX.play()
         
     def skip(self) -> None:
