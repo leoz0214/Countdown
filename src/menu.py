@@ -2,7 +2,6 @@
 The main menu which leads to different parts of the game.
 """
 import tkinter as tk
-from collections import namedtuple
 
 import game
 import stats
@@ -12,11 +11,10 @@ import data
 import level
 from colours import *
 from utils import ink_free
+from achievements import AchievementTierRequirements
 
 
-TieredStatistic = namedtuple("TieredStatistic", "bronze silver gold platinum")
-
-WIN_STREAK_CATEGORIES = TieredStatistic(2, 5, 20, 78)
+WIN_STREAK_CATEGORIES = AchievementTierRequirements(2, 5, 20, 78)
 
 
 class MainMenu(tk.Frame):
