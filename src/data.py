@@ -16,7 +16,6 @@ except ImportError:
     import json
 
 from utils import days_to_seconds
-from achievements import SPECIAL_ACHIEVEMENTS
 
 
 OPERATORS = "+-x÷"
@@ -373,6 +372,8 @@ def get_special_achievements() -> dict[str, str]:
     If a special achievement is complete, it will have a value of True,
     else False.
     """
+    # To prevent circular import.
+    from achievements import SPECIAL_ACHIEVEMENTS
     try:
         with open(SPECIAL_ACHIEVEMENTS_FILE, "r", encoding="utf8") as f:
             special_achievements = json.load(f)

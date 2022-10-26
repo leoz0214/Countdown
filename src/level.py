@@ -11,6 +11,13 @@ from utils import ink_free
 MAX_LEVEL = 100
 
 
+def get_total_xp_for_level(level: int) -> int:
+    """
+    Returns the total amount of XP to reach a certain level.
+    """
+    return round(((level - 1) ** 2  + (level - 1)) / 2) * 100
+
+
 class Level:
     """
     Holds the player's current level and the amount of XP
