@@ -12,7 +12,8 @@ import solutions
 import stats
 from colours import *
 from utils import get_sfx, ink_free, days_to_seconds
-from achievements import format_achievement, format_special_achievement
+from achievements import (
+    format_achievement, format_special_achievement, get_achievement_count)
 
 
 OPERATORS = "+-x÷"
@@ -134,13 +135,14 @@ def get_xp_earned(solution: str | None) -> tuple[int, list[str]]:
     return xp_earned, xp_sources
 
 
-def get_special_achievements_earned(game_data: "GameData") -> list[str]:
+def get_achievements_earned(
+    game_data: "GameData") -> list[str]:
     """
-    Checks for any special achievements earned and returns
-    any achievements earned.
+    Checks for any achievements earned and returns them.
     """
     earned = []
     games = data.get_game_data()
+    starting_achievement_count = get_achievement_count()
 
     games_played_last_24_hours = len(
         stats.filter_by_time(games, days_to_seconds(1)))
@@ -171,7 +173,9 @@ def get_special_achievements_earned(game_data: "GameData") -> list[str]:
     elif tuple(game_data.operator_counts.values()).count(0) == 3:
         # Only one operator used.
         if data.complete_special_achievement("one_operator"):
-            earned.append(format_special_achievement("one_operator"))      
+            earned.append(format_special_achievement("one_operator"))
+
+
     
     return earned
 
@@ -268,8 +272,7 @@ class GameEnd(tk.Frame):
         total_xp_before = data.get_total_xp()
         self.new_total_xp = total_xp_before + self.game_data.xp_earned
 
-        special_achievements_earned = get_special_achievements_earned(
-            self.game_data)
+        achievements_earned = get_achievements_earned(self.game_data)
 
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Finish")
