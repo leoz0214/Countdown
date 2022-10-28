@@ -24,7 +24,7 @@ def format_achievement(
 
 def format_special_achievement(key: str) -> str:
     """
-    Format a special achievement.
+    Formats a special achievement.
     """
     return format_achievement(
         SPECIAL_ACHIEVEMENTS[key]["name"],
@@ -67,18 +67,29 @@ def get_tiered_achievement_descriptions(
     tier and a format string to put the number for each tier into.
     """
     return AchievementTierDescriptions(
-        *(
-            format_string.format(value)
-            for value in (
-                tier_requirements.bronze, tier_requirements.silver,
-                tier_requirements.gold, tier_requirements.platinum)))
+        *(format_string.format(value) for value in tier_requirements))
 
 
 def get_achievement_count() -> int:
     """
     Returns the number of achievements earned by the player.
     """
-    return -1 # To do
+    # Boolean sum - treat a completed special achievement as 1
+    # and an incomplete one as 0.
+    achievement_count = sum(data.get_special_achievements().values())
+
+    for key, value in TIERED_ACHIEVEMENTS.items():
+        if key == "achievements":
+            continue
+        result = value["function"]()
+        for requirement in value["requirements"]:
+            if result >= requirement:
+                achievement_count += 1
+    for requirement in TIERED_ACHIEVEMENTS["achievements"]["requirements"]:
+        if achievement_count >= requirement:
+            achievement_count += 1
+
+    return achievement_count
 
 
 AchievementTierRequirements = namedtuple(
@@ -111,7 +122,7 @@ TIERED_ACHIEVEMENTS = {
     
     "level": create_tiered_achievement(
         "Expertise Developement", data.get_total_xp,
-        # By XP
+        # By XP - nicer and easier to handle.
         AchievementTierRequirements(
             *(level.get_total_xp_for_level(lvl) for lvl in (5, 12, 25, 75))),
         AchievementTierDescriptions(
