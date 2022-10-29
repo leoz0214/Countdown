@@ -7,12 +7,14 @@ import time
 import menu
 import data
 import level
+import widgets
 from colours import *
 from utils import days_to_seconds, seconds_to_hhmmss, bool_to_state, ink_free
 
 
 OPERATORS = "+-x÷"
 TIME_CATEGORIES = ("Last 24 hours", "Last 7 days", "Last 30 days", "All time")
+PAGE_COUNT = 3
 
 
 def filter_by_time(games: list[dict], seconds: int) -> list[dict]:
@@ -91,7 +93,7 @@ class StatisticsWindow(tk.Frame):
 
         last_30_days = data.get_game_data()
         if len(last_30_days) <= data.MAX_ALLOWED_GAME_DATA:
-            # Possiblly over 30 days old.
+            # Possibly over 30 days old.
             last_30_days = filter_by_time(last_30_days, days_to_seconds(30))
         
         last_7_days = filter_by_time(last_30_days, days_to_seconds(7))
@@ -104,7 +106,7 @@ class StatisticsWindow(tk.Frame):
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Statistics")
 
-        self.pages_frame = PagesFrame(
+        self.pages_frame = StatisticsPagesFrame(
             self, page_number,
             last_24_hours_data, last_7_days_data, last_30_days_data)
         
@@ -231,7 +233,7 @@ class BestWinStreakLabelFrame(tk.LabelFrame):
         self.best_win_streak_label.pack()
 
 
-class PagesFrame(tk.Frame):
+class StatisticsPagesFrame(widgets.PagesFrame):
     """
     Allows stats to be placed into pages, which can be cycled
     through.
@@ -242,10 +244,8 @@ class PagesFrame(tk.Frame):
         last_24_hours_data: dict, last_7_days_data: dict,
         last_30_days_data: dict
     ) -> None:
-        super().__init__(master, width=1200, height=360)
-        # Keep size of frame constant as the current page changes.
-        self.pack_propagate(False)
-        self.pages = []
+        super().__init__(
+            master, starting_page_number, PAGE_COUNT, width=1200, height=360)
 
         first_page = tk.Frame(self)
         games_played_frame = TimedStatisticLabelFrame(
@@ -269,7 +269,7 @@ class PagesFrame(tk.Frame):
         games_played_frame.pack(side="left", padx=10, pady=10)
         games_won_frame.pack(side="left", padx=10, pady=10)
         time_played_frame.pack(padx=10, pady=10)
-        self.pages.append(first_page)
+        self.add(first_page)
 
         second_page = tk.Frame(self)
         operators_used_frame = OperatorsUsedLabelFrame(
@@ -292,7 +292,7 @@ class PagesFrame(tk.Frame):
         operators_used_frame.pack(side="left", padx=10, pady=10)
         small_numbers_used_frame.pack(side="left", padx=10, pady=10)
         big_numbers_used_frame.pack(padx=10, pady=10)
-        self.pages.append(second_page)
+        self.add(second_page)
     
         third_page = tk.Frame(self)
         xp_earned_frame = TimedStatisticLabelFrame(
@@ -308,71 +308,6 @@ class PagesFrame(tk.Frame):
         xp_earned_frame.pack(side="left", padx=10, pady=10)
         level_frame.pack(side="left", anchor="n", padx=10, pady=10)
         best_win_streak_frame.pack(padx=10, pady=10)
-        self.pages.append(third_page)
+        self.add(third_page)
 
-        self.first_page = 1
-        self.last_page = self.total_pages = len(self.pages)
-        self.current_page = starting_page_number
-
-        self.navigation_frame = PageNavigationFrame(self)
-        self.navigation_frame.pack(padx=10, pady=10)
-
-        self.pages[self.current_page - 1].pack(padx=10, pady=10)
-
-
-class PageNavigationFrame(tk.Frame):
-    """
-    Allows the page number to be changed.
-    """
-
-    def __init__(self, master: PagesFrame) -> None:
-        super().__init__(master)
-        self.master = master
-        self.back_button = tk.Button(
-            self, font=ink_free(25), text="<", width=3, border=5,
-            bg=ORANGE, activebackground=GREEN,
-            state=bool_to_state(
-                self.master.current_page != self.master.first_page),
-            command=self.back)
-        self.current_page_label = tk.Label(
-            self, font=ink_free(25),
-            text=f"{self.master.current_page} / {self.master.total_pages}",
-            width=8)
-        self.forward_button = tk.Button(
-            self, font=ink_free(25), text=">", width=3, border=5,
-            bg=ORANGE, activebackground=GREEN,
-            state=bool_to_state(
-                self.master.current_page != self.master.last_page),
-            command=self.forward)
-        
-        self.back_button.pack(side="left")
-        self.current_page_label.pack(side="left")
-        self.forward_button.pack()
-    
-    def back(self) -> None:
-        """
-        Move back a page.
-        """
-        self.master.pages[self.master.current_page - 1].pack_forget()
-        self.master.current_page -= 1
-        self.current_page_label.config(
-            text=f"{self.master.current_page} / {self.master.total_pages}")
-        if self.master.current_page == self.master.first_page:
-            self.back_button.config(state="disabled")
-        # Can definitely go forward.
-        self.forward_button.config(state="normal")
-        self.master.pages[self.master.current_page - 1].pack(padx=10, pady=10)
-    
-    def forward(self) -> None:
-        """
-        Move forward a page.
-        """
-        self.master.pages[self.master.current_page - 1].pack_forget()
-        self.master.current_page += 1
-        self.current_page_label.config(
-            text=f"{self.master.current_page} / {self.master.total_pages}")
-        if self.master.current_page == self.master.last_page:
-            self.forward_button.config(state="disabled")
-        # Can definitely go back.
-        self.back_button.config(state="normal")
-        self.master.pages[self.master.current_page - 1].pack(padx=10, pady=10)
+        self.show()
