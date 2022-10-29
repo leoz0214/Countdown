@@ -16,7 +16,7 @@ import data
 from utils import (
     draw_circle, evaluate, bool_to_state, get_sfx, get_music, ink_free)
 from colours import *
-from achievements import format_special_achievement
+from achievements import format_special_achievement, get_achievement_count
 
 
 NUMBER_COUNT = 7
@@ -57,6 +57,7 @@ class Game(tk.Frame):
         super().__init__(root)
         self.root = root
         self.root.title("Countdown - Game")
+        self.starting_achievement_count = get_achievement_count()
 
         self.frame = SelectNumbersFrame(self)
         self.frame.pack()
@@ -101,8 +102,8 @@ class Game(tk.Frame):
         self.root.unbind("<Key>")
         stop_time = time.time()
         end.GameEnd(
-            self.root, solution, numbers, target,
-            self.start_time, stop_time).pack()
+            self.root, solution, numbers, target, self.start_time, stop_time,
+            self.starting_achievement_count).pack()
 
 
 class SelectNumbersFrame(tk.Frame):

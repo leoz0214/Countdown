@@ -13,7 +13,8 @@ import stats
 from colours import *
 from utils import get_sfx, ink_free, days_to_seconds
 from achievements import (
-    format_achievement, format_special_achievement, get_achievement_count)
+    format_tiered_achievement, format_special_achievement,
+    get_achievement_count, TIERED_ACHIEVEMENTS)
 
 
 OPERATORS = "+-x÷"
@@ -55,6 +56,15 @@ STREAK_XP_MULTIPLIER = {
 
 ADD_XP_CHUNK_COUNT = 50
 ADD_XP_DELAY_MS = 40
+
+SHOW_ACHIEVEMENT_DELAY_MS = 500
+
+# Achievements based on statistics
+# that can only increase by 1 per round, if at all.
+INCREMENTING_ACHIEVEMENTS_KEYS = ("games_played", "wins", "best_streak")
+# Achievemnts based on statistics that can increase by
+# more than 1 per round.
+ADDITIVE_ACHIEVEMENTS_KEYS = ("time_played", "level")
 
 LEVEL_UP_SFX = get_sfx("levelup.wav")
 
@@ -136,13 +146,22 @@ def get_xp_earned(solution: str | None) -> tuple[int, list[str]]:
 
 
 def get_achievements_earned(
-    game_data: "GameData") -> list[str]:
+    game_data: "GameData", starting_achievement_count: int,
+    previous_seconds_played: float, previous_total_xp: int) -> list[str]:
     """
     Checks for any achievements earned and returns them.
     """
     earned = []
     games = data.get_game_data()
-    starting_achievement_count = get_achievement_count()
+    previous_achievement_stats = {
+        "time_played": previous_seconds_played, "level": previous_total_xp
+    }
+    new_achievement_stats = {
+        "time_played": (
+            previous_seconds_played +
+            (game_data.stop_time - game_data.start_time)),
+        "level": previous_total_xp + game_data.xp_earned
+    }
 
     games_played_last_24_hours = len(
         stats.filter_by_time(games, days_to_seconds(1)))
@@ -175,8 +194,42 @@ def get_achievements_earned(
         if data.complete_special_achievement("one_operator"):
             earned.append(format_special_achievement("one_operator"))
 
+    for key, value in TIERED_ACHIEVEMENTS.items():
+        if key == "achievements":
+            # Ignore - deal with at the end.
+            continue
+        if key in INCREMENTING_ACHIEVEMENTS_KEYS:
+            result = value["function"]()
+            for i, requirement in enumerate(value["requirements"]):
+                if result == requirement:
+                    # Possibly not incremented this round if lost.
+                    if key == "wins" and not game_data.is_win:
+                        break
+                    # Ensures current
+                    # streak is indeed best streak or ignore.
+                    if (
+                        key == "best_streak"
+                        and not data.get_win_streak() == result
+                    ):
+                        break
+                    earned.append(format_tiered_achievement(key, i))
+                    break
+        elif key in ADDITIVE_ACHIEVEMENTS_KEYS:
+            for i, requirement in enumerate(value["requirements"]):
+                if previous_achievement_stats[key] >= requirement:
+                    continue
+                elif new_achievement_stats[key] >= requirement:
+                    earned.append(format_tiered_achievement(key, i))
 
-    
+    new_achievement_count = get_achievement_count()
+    for i, requirement in enumerate(
+        TIERED_ACHIEVEMENTS["achievements"]["requirements"]
+    ):
+        if starting_achievement_count - 1 >= requirement:
+            continue
+        if new_achievement_count - 1 >= requirement:
+            earned.append(format_tiered_achievement("achievements", i))
+
     return earned
 
 
@@ -208,13 +261,12 @@ class GameData:
             for char in self.solution + " ":
                 if char.isdigit():
                     number += char
-                else:
-                    if number:
-                        if len(number) == 1:
-                            self.small_numbers += 1
-                        else:
-                            self.big_numbers += 1
-                        number = ""
+                elif number:
+                    if len(number) == 1:
+                        self.small_numbers += 1
+                    else:
+                        self.big_numbers += 1
+                    number = ""
         else:
             self.operator_counts = {operator: 0 for operator in OPERATORS}
 
@@ -239,11 +291,14 @@ class GameEnd(tk.Frame):
 
     def __init__(
         self, root: tk.Tk, solution: str | None, numbers: list[int],
-        target: int, start_time: float, stop_time: float) -> None:
+        target: int, start_time: float, stop_time: float,
+        starting_achievement_count: int) -> None:
 
         super().__init__(root)
         self.root = root
         self.root.title("Countdown - Finish")
+
+        starting_seconds_played = data.get_seconds_played()
 
         data.increment_games_played()
 
@@ -265,14 +320,17 @@ class GameEnd(tk.Frame):
                 data.add_small_numbers_used(self.game_data.small_numbers)
             if self.game_data.big_numbers:
                 data.add_big_numbers_used(self.game_data.big_numbers)
-        data.add_seconds_played(stop_time - start_time)
+        data.add_seconds_played(
+            self.game_data.stop_time - self.game_data.start_time)
         data.add_operators_used(self.game_data.operator_counts)
 
         level_before = level.Level().level
         total_xp_before = data.get_total_xp()
         self.new_total_xp = total_xp_before + self.game_data.xp_earned
 
-        achievements_earned = get_achievements_earned(self.game_data)
+        achievements_earned = get_achievements_earned(
+            self.game_data, starting_achievement_count,
+            starting_seconds_played, total_xp_before)
 
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Finish")
@@ -293,16 +351,23 @@ class GameEnd(tk.Frame):
             self, self.game_data.xp_sources,
             self.game_data.xp_earned, level_before)
         
+        self.achievements_frame = GameEndAchievementsFrame(
+            self, achievements_earned)
+        
         self.options_frame = GameEndOptionsFrame(self, self.game_data.is_win)
 
         self.solutions_frame = solutions.SolutionsFrame(
             self.root, self, self.game_data.numbers, self.game_data.target)
 
-        self.title_label.pack(padx=15, pady=5)
-        self.message_label.pack(padx=10, pady=5)
-        self.streak_label.pack(padx=10, pady=5)
-        self.xp_frame.pack(padx=10, pady=5)
-        self.options_frame.pack(padx=10, pady=10)
+        self.title_label.grid(row=0, column=0, columnspan=2, padx=15, pady=5)
+        self.message_label.grid(
+            row=1, column=0, columnspan=2, padx=10, pady=5)
+        self.streak_label.grid(row=2, column=0, columnspan=2, padx=10, pady=5)
+        self.xp_frame.grid(row=3, column=0, padx=10, pady=5, sticky="n")
+        self.achievements_frame.grid(
+            row=3, column=1, padx=10, pady=5, sticky="n")
+        self.options_frame.grid(
+            row=4, column=0, columnspan=2, padx=10, pady=5)
     
     def exit(self) -> None:
         """
@@ -368,7 +433,7 @@ class GameEndXpFrame(tk.Frame):
         self.title = tk.Label(self, font=ink_free(25, True), text="XP/Level")
 
         self.xp_sources_listbox = tk.Listbox(
-            self, font=ink_free(15), width=25, height=5)
+            self, font=ink_free(15), width=25, height=5, bg=GREEN, border=5)
         for source in sources:
             self.xp_sources_listbox.insert("end", source)
         
@@ -412,6 +477,39 @@ class GameEndXpFrame(tk.Frame):
 
         self.after(ADD_XP_DELAY_MS, lambda: self.add_xp_in_chunks(
             xp_remaining - xp_to_add, chunks_remaining - 1))
+
+
+class GameEndAchievementsFrame(tk.Frame):
+    """
+    Displayed any achievements earned at the end of the round.
+    """
+
+    def __init__(self, master: GameEnd, achievements: list[str]) -> None:
+        super().__init__(master)
+        self.achievements = achievements
+        self.title = tk.Label(
+            self, font=ink_free(25, True), text="Achievements")
+        self.listbox = tk.Listbox(
+            self, font=ink_free(12), width=70, height=6, bg=GREEN, border=5)
+        self.earned_label = tk.Label(
+            self, font=ink_free(20), text=f"Earned: {len(achievements)}")
+        
+        self.title.pack(padx=10, pady=5)
+        self.listbox.pack(padx=5, pady=5)
+        self.earned_label.pack(padx=5)
+        self.show_achievement_one_at_a_time()
+    
+    def show_achievement_one_at_a_time(self, index: int = 0) -> None:
+        """
+        Displays each achievement earned in the listbox one at a time, with
+        a delay between each.
+        """
+        if index >= len(self.achievements):
+            return
+        self.listbox.insert("end", self.achievements[index])
+        self.after(
+            SHOW_ACHIEVEMENT_DELAY_MS,
+            lambda: self.show_achievement_one_at_a_time(index + 1))
 
 
 class GameEndOptionsFrame(tk.Frame):
