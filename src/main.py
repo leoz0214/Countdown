@@ -24,6 +24,7 @@ def main() -> None:
     """
     Main function of the program.
     """
+    # In case the program terminated unexpectedly.
     data.remove_temp_folder()
     # Only allows one instance of the main program to be run at any time.
     # Prevents the risks of race conditions, especially during IO.
@@ -73,6 +74,7 @@ def close_window(root: tk.Tk) -> None:
     elif isinstance(frame, end.GameEnd):
         frame.exit()
 
+    data.remove_temp_folder()
     sys.exit()
 
 

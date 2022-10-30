@@ -14,8 +14,14 @@ from colours import *
 from utils import ink_free, seconds_to_hhmmss
 
 
-PAGE_COUNT = 3
+PAGE_COUNT = 4
 TIERS = ("bronze", "silver", "gold", "platinum")
+
+AchievementTierRequirements = namedtuple(
+    "AchievementTierRequirements", "bronze silver gold platinum")
+
+AchievementTierDescriptions = namedtuple(
+    "AchievementTierDescriptions", "bronze silver gold platinum")
 
 
 def format_achievement(
@@ -75,8 +81,8 @@ def create_special_achievement(
 
 
 def get_tiered_achievement_descriptions(
-    format_string: str, tier_requirements: "AchievementTierRequirements"
-) -> "AchievementTierDescriptions":
+    format_string: str, tier_requirements: AchievementTierRequirements
+) -> AchievementTierDescriptions:
     """
     Gets tiered achievement descriptions based on requirements for each
     tier and a format string to put the number for each tier into.
@@ -105,13 +111,6 @@ def get_achievement_count() -> int:
             achievement_count += 1
 
     return achievement_count
-
-
-AchievementTierRequirements = namedtuple(
-    "AchievementTierRequirements", "bronze silver gold platinum")
-
-AchievementTierDescriptions = namedtuple(
-    "AchievementTierDescriptions", "bronze silver gold platinum")
 
 
 # Tiered achievements
@@ -230,7 +229,7 @@ class TieredAchievementLabelFrame(tk.LabelFrame):
         achievement = TIERED_ACHIEVEMENTS[key]
         super().__init__(
             master, font=ink_free(25, italic=True),
-            text=achievement["name"])
+            text=achievement["name"], labelanchor="n")
         
         self.result = achievement["function"]()
         # Final value of requirement is indeed the
@@ -256,11 +255,15 @@ class TieredAchievementLabelFrame(tk.LabelFrame):
                 self, font=ink_free(15, True), fg=GREEN,
                 text=f"{achievement['descriptions'][-1]} [Complete!]")
         
+        self.progress_bar = widgets.ProgressBar(
+            self, min(1, round(self.result / self.requirement, 10)), 200, 8)
+        
         self.progress_label = tk.Label(
             self, font=ink_free(15),
             text=f"{self.result} / {self.requirement}")
         
         self.description_label.pack(padx=10)
+        self.progress_bar.pack(padx=10, pady=3)
         self.progress_label.pack(padx=10)
 
 
@@ -294,6 +297,39 @@ class LevelAchievementFrame(TieredAchievementLabelFrame):
                     (-1 + (1 - 4 * - (self.requirement / 50))**0.5) / 2) + 1))
 
 
+class SpecialAchievementLabelFrame(tk.LabelFrame):
+    """
+    Holds a special achievement, simply displaying its
+    name, description, tier and completion status.
+    """
+
+    def __init__(self, master: tk.Frame, key: str) -> None:
+        achievement = SPECIAL_ACHIEVEMENTS[key]
+        super().__init__(
+            master, font=ink_free(25, italic=True),
+            text=achievement["name"], labelanchor="n")
+        
+        self.description_label = tk.Label(
+            self, font=ink_free(15),
+            text=f"{achievement['description']} ({achievement['tier']})")
+        
+        complete = data.get_special_achievements()[key]
+        if complete:
+            self.config(
+                fg=(
+                    BRONZE if achievement["tier"] == "bronze" else
+                    SILVER if achievement["tier"] == "silver" else
+                    GOLD if achievement["tier"] == "gold" else PLATINUM))
+            self.status_label = tk.Label(
+                self, font=ink_free(15, True), text="Complete!", fg=GREEN)
+        else:
+            self.status_label = tk.Label(
+                self, font=ink_free(15), text="Incomplete", fg=RED)
+        
+        self.description_label.pack(padx=10, pady=5)
+        self.status_label.pack(padx=10, pady=5)
+
+
 class AchievementsPagesFrame(widgets.PagesFrame):
     """
     Allows the player to view the different pages of
@@ -323,6 +359,23 @@ class AchievementsPagesFrame(widgets.PagesFrame):
         page_2_achievements[1].grid(row=0, column=1, padx=10, pady=10)
         page_2_achievements[2].grid(
             row=1, column=0, columnspan=2, padx=10, pady=10)
-        self.add(page_2)   
+        self.add(page_2)
+
+        page_3 = tk.Frame(self)
+        page_3_achievements = [
+            SpecialAchievementLabelFrame(page_3, key)
+            for key in tuple(SPECIAL_ACHIEVEMENTS.keys())[:4]]
+        for i, achievement in enumerate(page_3_achievements):
+            # 2x2 grid (0,0), (0,1), (1,0), (1,1) (x=row, y=column)
+            achievement.grid(row=i // 2, column=i % 2, padx=10, pady=5)
+        self.add(page_3)
+
+        page_4 = tk.Frame(self)
+        page_4_achievements = [
+            SpecialAchievementLabelFrame(page_4, key)
+            for key in tuple(SPECIAL_ACHIEVEMENTS.keys())[4:]]
+        for i, achievement in enumerate(page_4_achievements):
+            achievement.grid(row=i // 2, column=i % 2, padx=10, pady=5)
+        self.add(page_4)
 
         self.show()

@@ -4,6 +4,7 @@ Supports level functionality.
 import tkinter as tk
 
 import data
+import widgets
 from colours import *
 from utils import ink_free
 
@@ -66,7 +67,7 @@ class LevelLabelFrame(tk.LabelFrame):
 
         if self.data.level < MAX_LEVEL:
             self.progress_bar = LevelProgressBar(
-                self, self.data.xp / self.data.required * 100)
+                self, self.data.xp / self.data.required)
             self.progress_label = tk.Label(
                 self, font=ink_free(15), width=15,
                 text=f"{self.data.xp} / {self.data.required} XP")
@@ -92,7 +93,7 @@ class LevelLabelFrame(tk.LabelFrame):
         self.data = new_level_data
 
         if self.data.level < MAX_LEVEL:
-            self.progress_bar.update(self.data.xp / self.data.required * 100)
+            self.progress_bar.update(self.data.xp / self.data.required)
             self.progress_label.config(
                 text=f"{self.data.xp} / {self.data.required} XP")
         else:
@@ -110,15 +111,13 @@ class LevelProgressBar(tk.Frame):
 
     def __init__(self, master: LevelLabelFrame, progress: float) -> None:
         super().__init__(master)
-        self.create(int(progress * 2))
+        self.create(progress)
     
-    def create(self, green_width: int) -> None:
+    def create(self, progress: float) -> None:
         """
-        Creates the canvas which represents the progress bar.
+        Creates the progress bar.
         """
-        self.canvas = tk.Canvas(self, width=200, height=8)
-        self.canvas.create_rectangle(0, 0, green_width, 8, fill=GREEN)
-        self.canvas.create_rectangle(green_width, 0, 200, 8, fill=GREY)
+        self.canvas = widgets.ProgressBar(self, progress, 200, 8)
         self.canvas.pack(padx=25, pady=25)
     
     def update(self, new_progress: float) -> None:
@@ -126,4 +125,4 @@ class LevelProgressBar(tk.Frame):
         Changes the amount of level progress displayed.
         """
         self.canvas.destroy()
-        self.create(int(new_progress * 2))
+        self.create(new_progress)
