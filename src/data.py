@@ -16,6 +16,7 @@ except ImportError:
     import json
 
 from utils import days_to_seconds
+from options import DEFAULT_OPTIONS, COUNTDOWN_MUSIC
 
 
 OPERATORS = "+-x÷"
@@ -24,6 +25,7 @@ FOLDER = "./data"
 STREAK_FILE = f"{FOLDER}/streak.dat"
 RECENT_NUMBERS_FILE = f"{FOLDER}/recent_numbers.json"
 SPECIAL_ACHIEVEMENTS_FILE = f"{FOLDER}/achievements.json"
+OPTIONS_FILE = f"{FOLDER}/options.json"
 
 STATS_FOLDER = f"{FOLDER}/stats"
 XP_FILE = f"{STATS_FOLDER}/xp.dat"
@@ -408,6 +410,61 @@ def complete_special_achievement(key: str) -> bool:
         json.dump(special_achievements, f)
     return True
 
+
+def options_dict_is_valid(options: dict, expected: dict) -> bool:
+    """
+    Checks if the options dict (or any nested ones) is as expected
+    (same keys in the correct order, same value types).
+    """
+    if len(options) != len(expected):
+        return False
+    for key, expected_key in zip(options, expected):
+        if key != expected_key:
+            return False
+        if key == "countdown" and options[key] not in COUNTDOWN_MUSIC:
+            # Invalid music file.
+            return False
+        if key == "min_small" and not 2 <= options[key] <= 5:
+            return False
+        if key == "minutes" and not 1 <= options[key] <= 5:
+            return False
+    for value, default_value in zip(
+        options.values(), expected.values()
+    ):
+        if type(value) != type(default_value):
+            return False
+        if isinstance(default_value, dict):
+            if not options_dict_is_valid(value, default_value):
+                return False
+    return True
+
+
+@check_folder_exists()
+def get_options() -> dict:
+    """
+    Returns the player's settings.
+    """
+    try:
+        with open(OPTIONS_FILE, "r", encoding="utf8") as f:
+            options = json.load(f)
+        if not options_dict_is_valid(options, DEFAULT_OPTIONS):
+            raise ValueError
+        return options
+    except (FileNotFoundError, ValueError):
+        # File does not exist or is corrupt. Reset settings to default.
+        with open(OPTIONS_FILE, "w", encoding="utf8") as f:
+            json.dump(DEFAULT_OPTIONS, f)
+        return DEFAULT_OPTIONS
+
+
+@check_folder_exists()
+def set_options(options: dict) -> None:
+    """
+    Sets the player's settings.
+    """
+    with open(OPTIONS_FILE, "w", encoding="utf8") as f:
+        json.dump(options, f)
+            
 
 @check_folder_exists(TEMPORARY_FOLDER)
 def create_temp_folder() -> None:

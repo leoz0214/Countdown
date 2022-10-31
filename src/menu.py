@@ -1,5 +1,5 @@
 """
-The main menu which leads to different parts of the game.
+The main menu which leads to different parts of the app.
 """
 import tkinter as tk
 
@@ -7,6 +7,7 @@ import game
 import stats
 import achievements
 import history
+import options
 import data
 import level
 from colours import *
@@ -71,6 +72,13 @@ class MainMenu(tk.Frame):
         self.destroy()
         achievements.AchievementsWindow(self.root).pack()
 
+    def options(self) -> None:
+        """
+        Opens options.
+        """
+        self.destroy()
+        options.OptionsWindow(self.root).pack()
+
 
 class CurrentWinStreakLabel(tk.Label):
     """
@@ -118,7 +126,8 @@ class MainMenuNavigationFrame(tk.Frame):
             command=master.history)
         self.options_button = tk.Button(
             self, font=ink_free(15), text="Options",
-            bg=ORANGE, activebackground=GREEN, width=15, border=3)
+            bg=ORANGE, activebackground=GREEN, width=15, border=3,
+            command=master.options)
         self.tutorial_button = tk.Button(
             self, font=ink_free(15), text="Tutorial",
             bg=ORANGE, activebackground=GREEN, width=15, border=3)
