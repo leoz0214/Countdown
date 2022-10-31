@@ -9,7 +9,7 @@ import data
 import level
 import widgets
 from colours import *
-from utils import days_to_seconds, seconds_to_hhmmss, bool_to_state, ink_free
+from utils import days_to_seconds, seconds_to_hhmmss, ink_free
 
 
 OPERATORS = "+-x÷"

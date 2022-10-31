@@ -96,3 +96,18 @@ class PageNavigationFrame(tk.Frame):
         # Can definitely go back.
         self.back_button.config(state="normal")
         self.master.pages[self.master.current_page - 1].pack(padx=10, pady=10)
+
+
+class ProgressBar(tk.Canvas):
+    """
+    Visually shows progress towards something,
+    such as the next level or an achievement.
+    """
+
+    def __init__(
+        self, master: tk.Widget, progress: float, width: int, height: int
+    ) -> None:
+        super().__init__(master, width=width, height=height)
+        self.create_rectangle(0, 0, int(width * progress), height, fill=GREEN)
+        self.create_rectangle(
+            int(width * progress), 0, width, height, fill=GREY)

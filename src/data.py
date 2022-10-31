@@ -9,7 +9,7 @@ from contextlib import suppress
 from typing import Callable
 
 try:
-    # Faster json module.
+    # Faster json module (third-party).
     import ujson as json
 except ImportError:
     print("Warning: ujson not found, using built-in json instead.")
@@ -52,22 +52,26 @@ SECONDS_IN_30_DAYS = days_to_seconds(30)
 def check_folder_exists(folder: str = FOLDER) -> Callable:
     """
     Ensures a folder exists, or else, creates it.
+    Creates any required parent folders.
     """
     def decorator(function: Callable) -> Callable:
         def wrap(*args, **kwargs) -> Callable:
-            with suppress(FileExistsError):
-                os.mkdir(folder)
+            for i, char in enumerate(folder + "/"):
+                if char == "/" and folder[:i] != "C:":
+                    with suppress(FileExistsError):
+                        os.mkdir(folder[:i])
             return function(*args, **kwargs)
         return wrap
     return decorator
 
 
 def get_incremental_data_functions(
-    file: str, required_folders: tuple[str] | None = None) -> tuple[Callable]:
+    file: str, folder: str = FOLDER) -> tuple[Callable]:
     """
     Creates simple incremental data functions to be used for a variety
     of data that needs to be stored in this program.
     """
+    @check_folder_exists(folder)
     def get() -> int:
         try:
             with open(file, "rb") as f:
@@ -81,27 +85,22 @@ def get_incremental_data_functions(
                 f.write(b"0")
             return 0
 
+    @check_folder_exists(folder)
     def increment() -> None:
         new = get() + 1
         with open(file, "wb") as f:
             f.write(str(new).encode())
 
-    if required_folders:
-        # Checks in reverse - least nested folders checked for first.
-        for folder in reversed(required_folders):
-            get = check_folder_exists(folder)(get)
-            increment = check_folder_exists(folder)(increment)
-    get = check_folder_exists()(get)
-    increment = check_folder_exists()(increment)
     return get, increment
 
 
 def get_additive_data_functions(
-    file: str, required_folders: tuple[str] | None = None, 
+    file: str, folder: str = FOLDER,
     data_type: type = int) -> tuple[Callable]:
     """
     Creates simple additive data functions (for adding to a number).
     """
+    @check_folder_exists(folder)
     def get() -> int | float:
         try:
             with open(file, "rb") as f:
@@ -114,18 +113,13 @@ def get_additive_data_functions(
             with open(file, "wb") as f:
                 f.write(b"0")
             return 0
-    
+
+    @check_folder_exists(folder)
     def add(value: int | float) -> None:
         new = get() + value
         with open(file, "wb") as f:
             f.write(str(new).encode())
 
-    if required_folders:
-        for folder in reversed(required_folders):
-            get = check_folder_exists(folder)(get)
-            add = check_folder_exists(folder)(add)
-    get = check_folder_exists()(get)
-    add = check_folder_exists()(add)
     return get, add
 
 
@@ -133,25 +127,25 @@ get_win_streak, increment_win_streak = (
     get_incremental_data_functions(STREAK_FILE))
 
 get_games_played, increment_games_played = (
-    get_incremental_data_functions(GAMES_PLAYED_FILE, (STATS_FOLDER,)))
+    get_incremental_data_functions(GAMES_PLAYED_FILE, STATS_FOLDER))
 
 get_win_count, increment_win_count = (
-    get_incremental_data_functions(GAMES_WON_FILE, (STATS_FOLDER,)))
+    get_incremental_data_functions(GAMES_WON_FILE, STATS_FOLDER))
 
 get_best_win_streak, increment_best_win_streak = (
-    get_incremental_data_functions(BEST_WIN_STREAK_FILE, (STATS_FOLDER,)))
+    get_incremental_data_functions(BEST_WIN_STREAK_FILE, STATS_FOLDER))
 
 get_total_xp, add_total_xp = (
-    get_additive_data_functions(XP_FILE, (STATS_FOLDER,)))
+    get_additive_data_functions(XP_FILE, STATS_FOLDER))
 
 get_small_numbers_used, add_small_numbers_used = (
-    get_additive_data_functions(SMALL_NUMBERS_FILE, (STATS_FOLDER,)))
+    get_additive_data_functions(SMALL_NUMBERS_FILE, STATS_FOLDER))
 
 get_big_numbers_used, add_big_numbers_used = (
-    get_additive_data_functions(BIG_NUMBERS_FILE, (STATS_FOLDER,)))
+    get_additive_data_functions(BIG_NUMBERS_FILE, STATS_FOLDER))
 
 get_seconds_played, add_seconds_played = (
-    get_additive_data_functions(SECONDS_PLAYED_FILE, (STATS_FOLDER,), float))
+    get_additive_data_functions(SECONDS_PLAYED_FILE, STATS_FOLDER, float))
 
 
 @check_folder_exists()
@@ -163,7 +157,6 @@ def reset_win_streak() -> None:
         f.write(b"0")
 
 
-@check_folder_exists()
 @check_folder_exists(STATS_FOLDER)
 def get_operators_used() -> dict[str, int]:
     """
@@ -190,7 +183,6 @@ def get_operators_used() -> dict[str, int]:
         return new
 
 
-@check_folder_exists()
 @check_folder_exists(STATS_FOLDER)
 def add_operators_used(operators_used: dict[str, int]) -> None:
     """
@@ -287,7 +279,6 @@ def remove_expired_games(
     return files
 
 
-@check_folder_exists()
 @check_folder_exists(GAME_DATA_FOLDER)
 def get_game_data() -> list[dict]:
     """
@@ -338,7 +329,6 @@ def get_game_data() -> list[dict]:
         return []
 
 
-@check_folder_exists()
 @check_folder_exists(GAME_DATA_FOLDER)
 def add_game_data(new_data: dict) -> None:
     """
@@ -419,7 +409,6 @@ def complete_special_achievement(key: str) -> bool:
     return True
 
 
-@check_folder_exists()
 @check_folder_exists(TEMPORARY_FOLDER)
 def create_temp_folder() -> None:
     """
