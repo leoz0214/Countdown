@@ -480,3 +480,11 @@ def remove_temp_folder() -> None:
     """
     with suppress(FileNotFoundError):
         shutil.rmtree(TEMPORARY_FOLDER)
+
+
+def reset_data() -> None:
+    """
+    Resets player data simply by deleting the data folder.
+    """
+    with suppress(FileNotFoundError):
+        shutil.rmtree(FOLDER)

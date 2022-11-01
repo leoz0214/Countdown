@@ -25,12 +25,17 @@ DEFAULT_OPTIONS = {
 
 COUNTDOWN_MUSIC_NAME_TO_FILE = {
     "Countdown": "countdown.wav",
-    "Flight of the Bumblebee": "flightofbumblebee.wav"
+    "Flight of the Bumblebee": "flightofbumblebee.wav",
+    "Can Can": "cancan.wav",
+    "8-bit": "8bit.wav",
+    "Relax": "relax.wav"
 }
 
 COUNTDOWN_MUSIC = {
     file: get_music(file) for file in COUNTDOWN_MUSIC_NAME_TO_FILE.values()
 }
+
+RESET_DATA_CONFIRMATION = "Yes, I am sure I want to reset"
 
 
 class OptionsWindow(tk.Frame):
@@ -48,9 +53,9 @@ class OptionsWindow(tk.Frame):
         self.pages_frame = OptionsPagesFrame(self)
         self.navigation_frame = OptionsNavigationFrame(self)
 
-        self.title_label.pack(padx=10, pady=5)
-        self.pages_frame.pack(padx=10, pady=5)
-        self.navigation_frame.pack(padx=10, pady=5)
+        self.title_label.pack(padx=10)
+        self.pages_frame.pack(padx=10)
+        self.navigation_frame.pack(padx=10)
     
     def back(self) -> None:
         """
@@ -100,6 +105,11 @@ class OptionsWindow(tk.Frame):
         ):
             data.set_options(DEFAULT_OPTIONS)
             self.destroy()
+            music = (
+                self.pages_frame.
+                music_frame.countdown_music_frame.current_music)
+            if music is not None:
+                music.stop()
             OptionsWindow(self.root).pack()
             messagebox.showinfo("Success", "Successfully reset options.")
 
@@ -197,16 +207,16 @@ class CountdownMusicLabelFrame(tk.LabelFrame):
                 border=3, bg=ORANGE, activebackground=GREEN,
                 selectcolor=GREEN, indicatoron=False, command=self.play)
             for name, file in COUNTDOWN_MUSIC_NAME_TO_FILE.items()]
-        # n x 2 grid of radiobuttons representing music tracks
+        # n x 5 grid of radiobuttons representing music tracks
         for i, radiobutton in enumerate(self.radiobuttons):
-            radiobutton.grid(row=i//2, column=i % 2, padx=5, pady=5)
+            radiobutton.grid(row=i//5, column=i % 5, padx=5, pady=5)
         
         self.stop_button = tk.Button(
             self, font=ink_free(15), text="Stop playback", width=15, border=5,
             bg=ORANGE, activebackground=RED, command=self.stop)
         self.stop_button.grid(
-            row=math.ceil(len(self.radiobuttons) / 2), column=0,
-            columnspan=2, padx=5, pady=5)
+            row=math.ceil(len(self.radiobuttons) / 5), column=0,
+            columnspan=5, padx=5, pady=5)
     
     def play(self) -> None:
         """
@@ -328,13 +338,69 @@ class SolutionTimeLimitFrame(StateOptionFrame):
         self.minutes_scale.grid(row=1, column=0, columnspan=3, padx=5, pady=5)
 
 
+class ResetDataFrame(tk.Frame):
+    """
+    Where the player has the option to reset all of their in-game data,
+    with a confirmation by typing 'Yes, I am sure I want to reset'.
+    """
+
+    def __init__(self, master: tk.Frame) -> None:
+        super().__init__(master)
+        self.master = master
+        self.title_label = tk.Label(
+            self, font=ink_free(25, True), text="Reset Data", fg=RED)
+        self.description_label = tk.Label(
+            self, font=ink_free(15),
+            text=(
+                "All of your in-game data will be reset and  "
+                "you will start from scratch.\n"
+                "To ensure you are certain about this, please type: "
+                f"{RESET_DATA_CONFIRMATION}"), fg=RED)
+        self.confirmation_entry = tk.Entry(self, font=ink_free(15), width=35)
+        self.reset_button = tk.Button(
+            self, font=ink_free(15), text="Reset", width=10, border=3,
+            bg=ORANGE, activebackground=RED, command=self.reset)
+        
+        self.title_label.pack(padx=10, pady=10)
+        self.description_label.pack(padx=10, pady=10)
+        self.confirmation_entry.pack(padx=10, pady=10)
+        self.reset_button.pack(padx=10, pady=10)
+    
+    def reset(self) -> None:
+        """
+        Upon confirmation, resets all player data.
+        """
+        text = self.confirmation_entry.get()
+        if not text:
+            messagebox.showerror(
+                "No confirmation", "Please enter the confirmation text.")
+            return
+        if text != RESET_DATA_CONFIRMATION:
+            messagebox.showerror(
+                "Incorrect confirmation",
+                    "You did not enter the confirmation text correctly. "
+                    "It must be exactly the same.")
+            return
+        if messagebox.askyesnocancel(
+            "Final confirmation",
+                "This is your last chance to preserve your current data.\n"
+                "Are you 100% sure that this is what you want?\n"
+                "Your data cannot be restored once it is wiped.\n",
+            icon="warning"
+        ):
+            data.reset_data()
+            self.master.master.back()
+            messagebox.showinfo("Success", "Clean slate!")
+
+
 class OptionsPagesFrame(widgets.PagesFrame):
     """
     Holds the various options, displayed on different pages.
     """
 
     def __init__(self, master: OptionsWindow) -> None:
-        super().__init__(master, 1, PAGE_COUNT, 1200, 420)
+        super().__init__(master, 1, PAGE_COUNT, 1200, 450)
+        self.master = master
 
         page_1 = tk.Frame(self)
         self.music_frame = MusicFrame(page_1)
@@ -353,6 +419,9 @@ class OptionsPagesFrame(widgets.PagesFrame):
 
         self.solution_time_limit_frame = SolutionTimeLimitFrame(self)
         self.add(self.solution_time_limit_frame)
+
+        self.reset_data_frame = ResetDataFrame(self)
+        self.add(self.reset_data_frame)
 
         self.show()
 
