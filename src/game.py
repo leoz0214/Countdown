@@ -129,7 +129,6 @@ class SelectNumbersFrame(tk.Frame):
     def __init__(self, master: Game) -> None:
         super().__init__(master)
         self.master = master
-        1/0
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Select Numbers")
         self.selected_numbers_frame = SelectedNumbersFrame(self)
