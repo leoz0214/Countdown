@@ -11,11 +11,12 @@ import options
 import data
 import level
 from colours import *
-from utils import ink_free
+from utils import ink_free, bool_to_state, get_music
 from achievements import AchievementTierRequirements
 
 
 WIN_STREAK_CATEGORIES = AchievementTierRequirements(2, 5, 20, 78)
+MENU_MUSIC = get_music("menu.mp3")
 
 
 class MainMenu(tk.Frame):
@@ -31,24 +32,35 @@ class MainMenu(tk.Frame):
 
         self.title_label = tk.Label(
             self, font=ink_free(100, True), text="Countdown")
-        self.level_label_frame = level.LevelLabelFrame(self, level.Level())
-        
-        streak = data.get_win_streak()
-        self.win_streak_label = CurrentWinStreakLabel(self, streak)
-
         self.navigation_frame = MainMenuNavigationFrame(self)
 
-        self.title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
-        self.level_label_frame.grid(row=1, column=0, pady=10, sticky="s")
-        self.win_streak_label.grid(row=2, column=0, pady=10, sticky="n")
-        self.navigation_frame.grid(
-            row=1, column=1, rowspan=2, padx=10, sticky="n")
+        options = data.get_options()
+        if options["music"]["on"]:
+            MENU_MUSIC.play(-1)
+        
+        if options["stats"]:
+            self.level_label_frame = level.LevelLabelFrame(
+                self, level.Level())
+
+            streak = data.get_win_streak()
+            self.win_streak_label = CurrentWinStreakLabel(self, streak)
+            
+            self.title_label.grid(
+                row=0, column=0, columnspan=2, padx=25, pady=15)
+            self.level_label_frame.grid(row=1, column=0, pady=10, sticky="s")
+            self.win_streak_label.grid(row=2, column=0, pady=10, sticky="n")
+            self.navigation_frame.grid(
+                row=1, column=1, rowspan=2, pady=15, sticky="n")
+        else:
+            self.title_label.pack(padx=25, pady=15)
+            self.navigation_frame.pack(padx=10, pady=15)
     
     def play(self) -> None:
         """
         Starts the game.
         """
         self.destroy()
+        MENU_MUSIC.stop()
         game.Game(self.root).pack()
     
     def statistics(self) -> None:
@@ -56,6 +68,7 @@ class MainMenu(tk.Frame):
         Opens statistics.
         """
         self.destroy()
+        MENU_MUSIC.stop()
         stats.StatisticsWindow(self.root).pack()
     
     def history(self) -> None:
@@ -63,6 +76,7 @@ class MainMenu(tk.Frame):
         Opens history.
         """
         self.destroy()
+        MENU_MUSIC.stop()
         history.HistoryWindow(self.root).pack()
     
     def achievements(self) -> None:
@@ -70,6 +84,7 @@ class MainMenu(tk.Frame):
         Opens achievements.
         """
         self.destroy()
+        MENU_MUSIC.stop()
         achievements.AchievementsWindow(self.root).pack()
 
     def options(self) -> None:
@@ -77,6 +92,7 @@ class MainMenu(tk.Frame):
         Opens options.
         """
         self.destroy()
+        MENU_MUSIC.stop()
         options.OptionsWindow(self.root).pack()
 
 
@@ -107,6 +123,7 @@ class MainMenuNavigationFrame(tk.Frame):
 
     def __init__(self, master: MainMenu) -> None:
         super().__init__(master)
+        stats_on = data.get_options()["stats"]
 
         self.play_button = tk.Button(
             self, font=ink_free(25, True), text="Play", relief="ridge",
@@ -115,24 +132,21 @@ class MainMenuNavigationFrame(tk.Frame):
         self.stats_button = tk.Button(
             self, font=ink_free(15), text="Stats",
             bg=ORANGE, activebackground=GREEN, width=15, border=3,
-            command=master.statistics)
+            command=master.statistics, state=bool_to_state(stats_on))
         self.achievements_button = tk.Button(
             self, font=ink_free(15), text="Achievements",
             bg=ORANGE, activebackground=GREEN, width=15, border=3,
-            command=master.achievements)
+            command=master.achievements, state=bool_to_state(stats_on))
         self.history_button = tk.Button(
             self, font=ink_free(15), text="History",
             bg=ORANGE, activebackground=GREEN, width=15, border=3,
-            command=master.history)
+            command=master.history, state=bool_to_state(stats_on))
         self.options_button = tk.Button(
             self, font=ink_free(15), text="Options",
             bg=ORANGE, activebackground=GREEN, width=15, border=3,
             command=master.options)
         self.tutorial_button = tk.Button(
             self, font=ink_free(15), text="Tutorial",
-            bg=ORANGE, activebackground=GREEN, width=15, border=3)
-        self.credits_button = tk.Button(
-            self, font=ink_free(15), text="Credits",
             bg=ORANGE, activebackground=GREEN, width=15, border=3)
 
         self.play_button.pack(pady=5)
@@ -141,4 +155,3 @@ class MainMenuNavigationFrame(tk.Frame):
         self.history_button.pack(pady=5)
         self.options_button.pack(pady=5)
         self.tutorial_button.pack(pady=5)
-        self.credits_button.pack(pady=5)

@@ -14,7 +14,8 @@ import end
 import generate
 import data
 from utils import (
-    draw_circle, evaluate, bool_to_state, get_sfx, get_music, ink_free)
+    draw_circle, evaluate, bool_to_state, get_sfx, get_music, ink_free,
+    seconds_to_hhmmss)
 from colours import *
 from achievements import format_special_achievement, get_achievement_count
 
@@ -27,7 +28,8 @@ COUNT_SFX = get_sfx("count.wav")
 GO_SFX = get_sfx("go.wav")
 INCORRECT_SOLUTION_SFX = get_sfx("incorrect.mp3")
 CORRECT_SOLUTION_SFX = get_sfx("correct.mp3")
-COUNTDOWN_MUSIC = get_music("countdown.wav")
+
+AUTO_SELECT_DELAY_MS = 500
 
 SHUFFLES_BEFORE_REAL_NUMBER = 25
 SHUFFLE_DELAY_MS = 50
@@ -59,6 +61,15 @@ class Game(tk.Frame):
         self.root.title("Countdown - Game")
         self.starting_achievement_count = get_achievement_count()
 
+        options = data.get_options()
+        for sfx in (
+            SELECT_SFX, COUNT_SFX, GO_SFX, INCORRECT_SOLUTION_SFX,
+            CORRECT_SOLUTION_SFX
+        ):
+            sfx.set_volume(options["sfx"])
+        self.music = get_music(options["music"]["countdown"])
+        self.music.set_volume(options["music"]["on"])
+
         self.frame = SelectNumbersFrame(self)
         self.frame.pack()
     
@@ -86,7 +97,7 @@ class Game(tk.Frame):
         """
         Ends the round, leading the player to enter a solution.
         """
-        COUNTDOWN_MUSIC.stop()
+        self.music.stop()
         numbers = self.frame.numbers
         target = self.frame.target
         self.frame.destroy()
@@ -118,13 +129,18 @@ class SelectNumbersFrame(tk.Frame):
     def __init__(self, master: Game) -> None:
         super().__init__(master)
         self.master = master
-
+        1/0
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Select Numbers")
         self.selected_numbers_frame = SelectedNumbersFrame(self)
         self.small_numbers_frame = SmallNumbersFrame(self)
         self.big_numbers_frame = BigNumbersFrame(self)
         self.navigation_frame = SelectNumbersNavigationFrame(self)
+
+        auto_select = data.get_options()["auto_generate"]
+        if auto_select["on"]:
+            small_count = secrets.choice(range(auto_select["min_small"], 6))
+            self.auto_select(small_count, 7 - small_count)
         
         self.title_label.pack(padx=10, pady=10)
         self.selected_numbers_frame.pack(padx=10, pady=10)
@@ -148,6 +164,30 @@ class SelectNumbersFrame(tk.Frame):
             self.small_numbers_frame.destroy()
             self.big_numbers_frame.destroy()
             self.navigation_frame.start_button.config(state="normal")
+    
+    def auto_select(self, small_remaining: int, big_remaining: int) -> None:
+        """
+        Automatically selects numbers (from options).
+        """
+        if not small_remaining and not big_remaining:
+            return
+        if not small_remaining:
+            self.big_numbers_frame.select()
+            big_remaining -= 1
+        elif not big_remaining:
+            self.small_numbers_frame.select()
+            small_remaining -= 1
+        else:
+            to_select = secrets.choice(("small", "big"))
+            if to_select == "small":
+                self.small_numbers_frame.select()
+                small_remaining -= 1
+            else:
+                self.big_numbers_frame.select()
+                big_remaining -= 1
+        self.after(
+            AUTO_SELECT_DELAY_MS, lambda: self.auto_select(
+                small_remaining, big_remaining))
 
 
 class SelectedNumbersFrame(tk.Frame):
@@ -197,10 +237,12 @@ class SmallNumbersFrame(tk.Frame):
             self, font=ink_free(25, True), text="Small numbers (2-9):",
             width=25, justify="left")
         
+        auto_select = data.get_options()["auto_generate"]["on"]
         self.buttons = [
             tk.Button(
                 self, bg=ORANGE, activebackground=GREEN,
-                width=10, height=5, border=5, command=self.select)
+                width=10, height=5, border=5, command=self.select,
+                state=bool_to_state(not auto_select))
             for _ in range(MAX_SMALL_COUNT)]
         
         self.info_label.pack(side="left")
@@ -236,10 +278,12 @@ class BigNumbersFrame(tk.Frame):
             self, font=ink_free(25, True), width=25,
             text="Big numbers (25, 50, 75, 100):", justify="left")
         
+        auto_select = data.get_options()["auto_generate"]["on"]
         self.buttons = [
             tk.Button(
                 self, bg=ORANGE, activebackground=GREEN,
-                width=10, height=5, border=5, command=self.select)
+                width=10, height=5, border=5, command=self.select,
+                state=bool_to_state(not auto_select))
             for _ in range(MAX_SMALL_COUNT)]
         
         self.info_label.pack(side="left")
@@ -335,7 +379,7 @@ class CountdownFrame(tk.Frame):
         """
         if first:
             self.start_time = timer()
-            COUNTDOWN_MUSIC.play()
+            self.master.music.play()
         elif timer() - self.start_time >= DURATION_S:
             return self.master.end()
         else:
@@ -395,7 +439,7 @@ class CountdownClock(tk.Canvas):
         centy = 125
         draw_circle(self, centx, centy, radius, SILVER)
 
-        # 1 degree = 1/6 of a second.
+        # 1 degree = 1/6 of a second (30 seconds total, 180 degrees).
         angle = int(seconds_passed * 6)
 
         start = 90 - angle if angle <= 90 else 360 - (angle - 90)
@@ -505,9 +549,17 @@ class EnterSolutionFrame(tk.Frame):
         self.master = master
         self.numbers = numbers
         self.target = target
+        option = data.get_options()["solution_time_limit"]
+        self.start = timer()
+        self.max_seconds = (
+            option["minutes"] * 60 if option["on"] else float("inf"))
 
         self.title_label = tk.Label(
             self, font=ink_free(50, True), text="Enter your best solution!")
+        if option["on"]:
+            self.time_left_label = tk.Label(
+                self, font=ink_free(25), width=25,
+                text=f"Time left: {seconds_to_hhmmss(self.max_seconds)}")
         self.solution_label = SolutionLabel(self)
         self.solution_buttons = SolutionButtonsFrame(self)
         self.option_buttons = EnterSolutionOptionsFrame(self)
@@ -517,6 +569,9 @@ class EnterSolutionFrame(tk.Frame):
         self.closing_parentheses = 0
 
         self.title_label.pack(padx=25, pady=15)
+        if option["on"]:
+            self.time_left_label.pack(padx=10, pady=10)
+            self.update_time_remaining()
         self.solution_label.pack(padx=10, pady=10)
         self.solution_buttons.pack(padx=10, pady=10)
         self.option_buttons.pack(padx=10, pady=(50, 10))
@@ -712,7 +767,10 @@ class EnterSolutionFrame(tk.Frame):
             CORRECT_SOLUTION_SFX.play()
             self.master.proceed_to_finish(solution, self.numbers, self.target)
         else:
-            if data.complete_special_achievement("incorrect_solution"):
+            if (
+                data.get_options()["stats"] and
+                data.complete_special_achievement("incorrect_solution")
+            ):
                 messagebox.showinfo(
                     "Achievement!",
                     format_special_achievement("incorrect_solution"))
@@ -724,6 +782,19 @@ class EnterSolutionFrame(tk.Frame):
         This will be counted as a loss.
         """
         self.master.proceed_to_finish(None, self.numbers, self.target)
+
+    def update_time_remaining(self) -> None:
+        """
+        Updates the time remaining. If time is up, the solution
+        will be skipped and the round will count as a loss.
+        """
+        seconds_remaining = self.max_seconds - (timer() - self.start)
+        if seconds_remaining <= 0:
+            self.skip()
+            return
+        self.time_left_label.config(
+            text=f"Time left: {seconds_to_hhmmss(seconds_remaining)}")
+        self.after(10, self.update_time_remaining)
 
 
 class SolutionLabel(tk.Label):

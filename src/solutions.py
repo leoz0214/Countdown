@@ -8,6 +8,7 @@ from typing import Literal
 
 import game
 import generate
+import data
 from colours import *
 from utils import get_sfx, ink_free
 
@@ -49,6 +50,10 @@ class SolutionsFrame(tk.Frame):
         self.numbers = numbers
         self.target = target
         self.settings = None
+
+        options = data.get_options()
+        for sfx in (SOLUTION_FOUND_SFX, NO_SOLUTION_FOUND_SFX):
+            sfx.set_volume(options["sfx"])
 
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Solutions")

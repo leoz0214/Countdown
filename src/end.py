@@ -298,43 +298,12 @@ class GameEnd(tk.Frame):
         self.root = root
         self.root.title("Countdown - Finish")
 
-        starting_seconds_played = data.get_seconds_played()
-
-        data.increment_games_played()
-
-        old_streak = data.get_win_streak()
-        if solution is not None:
-            data.increment_win_streak()
-        else:
-            data.reset_win_streak()
-        new_streak = data.get_win_streak()
-        if new_streak > data.get_best_win_streak():
-            data.increment_best_win_streak()
-
-        self.game_data = GameData(
-            numbers, target, solution, start_time, stop_time)
-        self.game_data.save()
-        if self.game_data.is_win:
-            data.increment_win_count()
-            if self.game_data.small_numbers:
-                data.add_small_numbers_used(self.game_data.small_numbers)
-            if self.game_data.big_numbers:
-                data.add_big_numbers_used(self.game_data.big_numbers)
-        data.add_seconds_played(
-            self.game_data.stop_time - self.game_data.start_time)
-        data.add_operators_used(self.game_data.operator_counts)
-
-        level_before = level.Level().level
-        total_xp_before = data.get_total_xp()
-        self.new_total_xp = total_xp_before + self.game_data.xp_earned
-
-        achievements_earned = get_achievements_earned(
-            self.game_data, starting_achievement_count,
-            starting_seconds_played, total_xp_before)
-
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Finish")
-        
+
+        LEVEL_UP_SFX.set_volume(data.get_options()["sfx"])
+        self.game_data = GameData(
+            numbers, target, solution, start_time, stop_time)
         message = (
             get_winning_message(
                 self.game_data.solution, self.game_data.target)
@@ -342,32 +311,72 @@ class GameEnd(tk.Frame):
         self.message_label = tk.Label(
             self, font=ink_free(25, italic=True), text=message, width=60)
 
-        self.streak_label = tk.Label(
-            self, font=ink_free(25), text="Streak: {} -> {}".format(
-                old_streak, new_streak
-            ))
-
-        self.xp_frame = GameEndXpFrame(
-            self, self.game_data.xp_sources,
-            self.game_data.xp_earned, level_before)
-        
-        self.achievements_frame = GameEndAchievementsFrame(
-            self, achievements_earned)
-        
         self.options_frame = GameEndOptionsFrame(self, self.game_data.is_win)
 
         self.solutions_frame = solutions.SolutionsFrame(
             self.root, self, self.game_data.numbers, self.game_data.target)
+        
+        stats_on = data.get_options()["stats"]
+        if stats_on:
+            starting_seconds_played = data.get_seconds_played()
 
-        self.title_label.grid(row=0, column=0, columnspan=2, padx=15, pady=5)
-        self.message_label.grid(
-            row=1, column=0, columnspan=2, padx=10, pady=5)
-        self.streak_label.grid(row=2, column=0, columnspan=2, padx=10, pady=5)
-        self.xp_frame.grid(row=3, column=0, padx=10, pady=5, sticky="n")
-        self.achievements_frame.grid(
-            row=3, column=1, padx=10, pady=5, sticky="n")
-        self.options_frame.grid(
-            row=4, column=0, columnspan=2, padx=10, pady=5)
+            data.increment_games_played()
+
+            old_streak = data.get_win_streak()
+            if solution is not None:
+                data.increment_win_streak()
+            else:
+                data.reset_win_streak()
+            new_streak = data.get_win_streak()
+            if new_streak > data.get_best_win_streak():
+                data.increment_best_win_streak()
+
+            self.game_data.save()
+            if self.game_data.is_win:
+                data.increment_win_count()
+                if self.game_data.small_numbers:
+                    data.add_small_numbers_used(self.game_data.small_numbers)
+                if self.game_data.big_numbers:
+                    data.add_big_numbers_used(self.game_data.big_numbers)
+            data.add_seconds_played(
+                self.game_data.stop_time - self.game_data.start_time)
+            data.add_operators_used(self.game_data.operator_counts)
+
+            level_before = level.Level().level
+            total_xp_before = data.get_total_xp()
+            self.new_total_xp = total_xp_before + self.game_data.xp_earned
+
+            achievements_earned = get_achievements_earned(
+                self.game_data, starting_achievement_count,
+                starting_seconds_played, total_xp_before)
+
+            self.streak_label = tk.Label(
+                self, font=ink_free(25), text="Streak: {} -> {}".format(
+                    old_streak, new_streak
+                ))
+
+            self.xp_frame = GameEndXpFrame(
+                self, self.game_data.xp_sources,
+                self.game_data.xp_earned, level_before)
+            
+            self.achievements_frame = GameEndAchievementsFrame(
+                self, achievements_earned)
+
+            self.title_label.grid(
+                row=0, column=0, columnspan=2, padx=15, pady=5)
+            self.message_label.grid(
+                row=1, column=0, columnspan=2, padx=10, pady=5)
+            self.streak_label.grid(
+                row=2, column=0, columnspan=2, padx=10, pady=5)
+            self.xp_frame.grid(row=3, column=0, padx=10, pady=5, sticky="n")
+            self.achievements_frame.grid(
+                row=3, column=1, padx=10, pady=5, sticky="n")          
+            self.options_frame.grid(
+                row=4, column=0, columnspan=2, padx=10, pady=5)
+        else:
+            self.title_label.pack(padx=25, pady=25)
+            self.message_label.pack(padx=25, pady=25)
+            self.options_frame.pack(padx=25, pady=25)
     
     def exit(self) -> None:
         """
@@ -376,10 +385,11 @@ class GameEnd(tk.Frame):
         LEVEL_UP_SFX.stop()
         self.destroy()
         self.solutions_frame.destroy()
-        # In case animated XP gain is not finished.
-        current_total_xp = data.get_total_xp()
-        if current_total_xp < self.new_total_xp:
-            data.add_total_xp(self.new_total_xp - current_total_xp)
+        if data.get_options()["stats"]:
+            # In case animated XP gain is not finished.
+            current_total_xp = data.get_total_xp()
+            if current_total_xp < self.new_total_xp:
+                data.add_total_xp(self.new_total_xp - current_total_xp)
     
     def play_again(self) -> None:
         """

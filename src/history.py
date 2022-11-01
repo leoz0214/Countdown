@@ -34,11 +34,10 @@ class HistoryWindow(tk.Frame):
         self.back_button = tk.Button(
             self, font=ink_free(15), text="Back", width=10, border=5,
             bg=ORANGE, activebackground=RED, command=self.back)
+        self.solutions_frame = None
 
         if self.recent_games:
             self.recent_game_frame = None
-            self.solutions_frame = None
-
             self.recent_games_frame = RecentGamesFrame(self)
             
             self.title_label.grid(row=0, padx=10)
@@ -105,6 +104,8 @@ class HistoryWindow(tk.Frame):
         Returns to the main menu.
         """
         self.destroy()
+        if self.solutions_frame is not None:
+            self.solutions_frame.destroy()
         menu.MainMenu(self.root).pack()
 
 
