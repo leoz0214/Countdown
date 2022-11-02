@@ -16,12 +16,10 @@ except ImportError:
     import json
 
 from utils import days_to_seconds
-from options import DEFAULT_OPTIONS, COUNTDOWN_MUSIC
-
 
 OPERATORS = "+-x÷"
 
-FOLDER = "./data"
+FOLDER = f"{os.getenv('LOCALAPPDATA')}/CountdownGame/data"
 STREAK_FILE = f"{FOLDER}/streak.dat"
 RECENT_NUMBERS_FILE = f"{FOLDER}/recent_numbers.json"
 SPECIAL_ACHIEVEMENTS_FILE = f"{FOLDER}/achievements.json"
@@ -416,6 +414,7 @@ def options_dict_is_valid(options: dict, expected: dict) -> bool:
     Checks if the options dict (or any nested ones) is as expected
     (same keys in the correct order, same value types).
     """
+    from options import COUNTDOWN_MUSIC
     if len(options) != len(expected):
         return False
     for key, expected_key in zip(options, expected):
@@ -444,6 +443,7 @@ def get_options() -> dict:
     """
     Returns the player's settings.
     """
+    from options import DEFAULT_OPTIONS
     try:
         with open(OPTIONS_FILE, "r", encoding="utf8") as f:
             options = json.load(f)

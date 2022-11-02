@@ -7,6 +7,7 @@ from contextlib import suppress
 sys.path.extend((".", "./src"))
 
 from src import generate
+from src import data
 
 
 def generate_numbers():
@@ -32,7 +33,7 @@ class TestGenerate(unittest.TestCase):
 
     def test_generate_number(self):
         with suppress(FileNotFoundError):
-            shutil.rmtree("./data")
+            shutil.rmtree(data.FOLDER)
 
         numbers = generate_numbers()
 
@@ -40,7 +41,7 @@ class TestGenerate(unittest.TestCase):
             number = generate.generate_number(numbers)
             self.assertTrue(201 <= number <= 999 and isinstance(number, int))
 
-        shutil.rmtree("./data")
+        shutil.rmtree(data.FOLDER)
     
     def test_generate_solutions(self):
         numbers = generate_numbers()

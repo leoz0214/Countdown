@@ -2,6 +2,9 @@
 The main menu which leads to different parts of the app.
 """
 import tkinter as tk
+import gc
+import webbrowser
+from pathlib import Path
 
 import game
 import stats
@@ -17,6 +20,14 @@ from achievements import AchievementTierRequirements
 
 WIN_STREAK_CATEGORIES = AchievementTierRequirements(2, 5, 20, 78)
 MENU_MUSIC = get_music("menu.mp3")
+TUTORIAL_FILE = f"{Path('').parent.absolute()}/TUTORIAL.html"
+
+
+def open_tutorial() -> None:
+    """
+    Opens the tutorial of the game in a web browser.
+    """
+    webbrowser.open(TUTORIAL_FILE)
 
 
 class MainMenu(tk.Frame):
@@ -26,6 +37,7 @@ class MainMenu(tk.Frame):
     """
 
     def __init__(self, root: tk.Tk) -> None:
+        gc.collect()
         super().__init__(root)
         self.root = root
         self.root.title("Countdown - Main Menu")
@@ -147,7 +159,8 @@ class MainMenuNavigationFrame(tk.Frame):
             command=master.options)
         self.tutorial_button = tk.Button(
             self, font=ink_free(15), text="Tutorial",
-            bg=ORANGE, activebackground=GREEN, width=15, border=3)
+            bg=ORANGE, activebackground=GREEN, width=15, border=3,
+            command=open_tutorial)
 
         self.play_button.pack(pady=5)
         self.stats_button.pack(pady=5)

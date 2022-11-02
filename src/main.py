@@ -40,6 +40,7 @@ def launch() -> None:
     Runs the main application.
     """
     root = tk.Tk()
+    root.iconbitmap("./images/icon.ico")
     root.tk_setPalette(background=DEFAULT_BACKGROUND, foreground=BLACK)
     root.protocol("WM_DELETE_WINDOW", lambda: close_window(root))
     main_menu = menu.MainMenu(root)

@@ -1,0 +1,521 @@
+<!DOCTYPE html><html><head>
+      <title>TUTORIAL</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+      /**
+ * prism.js Github theme based on GitHub's theme.
+ * @author Sam Clarke
+ FROM VS CODE EXTENSION - DO NOT TOUCH.
+ FROM TUTORIAL.md
+ */
+code[class*="language-"],
+pre[class*="language-"] {
+  color: #333;
+  background: none;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1.4;
+
+  -moz-tab-size: 8;
+  -o-tab-size: 8;
+  tab-size: 8;
+
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  -ms-hyphens: none;
+  hyphens: none;
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+  padding: .8em;
+  overflow: auto;
+  /* border: 1px solid #ddd; */
+  border-radius: 3px;
+  /* background: #fff; */
+  background: #f5f5f5;
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+  padding: .1em;
+  border-radius: .3em;
+  white-space: normal;
+  background: #f5f5f5;
+}
+
+.token.comment,
+.token.blockquote {
+  color: #969896;
+}
+
+.token.cdata {
+  color: #183691;
+}
+
+.token.doctype,
+.token.punctuation,
+.token.variable,
+.token.macro.property {
+  color: #333;
+}
+
+.token.operator,
+.token.important,
+.token.keyword,
+.token.rule,
+.token.builtin {
+  color: #a71d5d;
+}
+
+.token.string,
+.token.url,
+.token.regex,
+.token.attr-value {
+  color: #183691;
+}
+
+.token.property,
+.token.number,
+.token.boolean,
+.token.entity,
+.token.atrule,
+.token.constant,
+.token.symbol,
+.token.command,
+.token.code {
+  color: #0086b3;
+}
+
+.token.tag,
+.token.selector,
+.token.prolog {
+  color: #63a35c;
+}
+
+.token.function,
+.token.namespace,
+.token.pseudo-element,
+.token.class,
+.token.class-name,
+.token.pseudo-class,
+.token.id,
+.token.url-reference .token.variable,
+.token.attr-name {
+  color: #795da3;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+.token.title,
+.token.title .token.punctuation {
+  font-weight: bold;
+  color: #1d3e81;
+}
+
+.token.list {
+  color: #ed6a43;
+}
+
+.token.inserted {
+  background-color: #eaffea;
+  color: #55a532;
+}
+
+.token.deleted {
+  background-color: #ffecec;
+  color: #bd2c00;
+}
+
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+
+/* JSON */
+.language-json .token.property {
+  color: #183691;
+}
+
+.language-markup .token.tag .token.punctuation {
+  color: #333;
+}
+
+/* CSS */
+code.language-css,
+.language-css .token.function {
+  color: #0086b3;
+}
+
+/* YAML */
+.language-yaml .token.atrule {
+  color: #63a35c;
+}
+
+code.language-yaml {
+  color: #183691;
+}
+
+/* Ruby */
+.language-ruby .token.function {
+  color: #333;
+}
+
+/* Markdown */
+.language-markdown .token.url {
+  color: #795da3;
+}
+
+/* Makefile */
+.language-makefile .token.symbol {
+  color: #795da3;
+}
+
+.language-makefile .token.variable {
+  color: #183691;
+}
+
+.language-makefile .token.builtin {
+  color: #0086b3;
+}
+
+/* Bash */
+.language-bash .token.keyword {
+  color: #0086b3;
+}
+
+/* highlight */
+pre[data-line] {
+  position: relative;
+  padding: 1em 0 1em 3em;
+}
+pre[data-line] .line-highlight-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: transparent;
+  display: block;
+  width: 100%;
+}
+
+pre[data-line] .line-highlight {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding: inherit 0;
+  margin-top: 1em;
+  background: hsla(24, 20%, 50%,.08);
+  background: linear-gradient(to right, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
+  pointer-events: none;
+  line-height: inherit;
+  white-space: pre;
+}
+
+pre[data-line] .line-highlight:before, 
+pre[data-line] .line-highlight[data-end]:after {
+  content: attr(data-start);
+  position: absolute;
+  top: .4em;
+  left: .6em;
+  min-width: 1em;
+  padding: 0 .5em;
+  background-color: hsla(24, 20%, 50%,.4);
+  color: hsl(24, 20%, 95%);
+  font: bold 65%/1.5 sans-serif;
+  text-align: center;
+  vertical-align: .3em;
+  border-radius: 999px;
+  text-shadow: none;
+  box-shadow: 0 1px white;
+}
+
+pre[data-line] .line-highlight[data-end]:after {
+  content: attr(data-end);
+  top: auto;
+  bottom: .4em;
+}html body{font-family:"Helvetica Neue",Helvetica,"Segoe UI",Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ul,html body>ol{margin-bottom:16px}html body ul,html body ol{padding-left:2em}html body ul.no-list,html body ol.no-list{padding:0;list-style-type:none}html body ul ul,html body ul ol,html body ol ol,html body ol ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:bold;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:bold}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em !important;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::before,html body code::after{letter-spacing:-0.2em;content:"\00a0"}html body pre>code{padding:0;margin:0;font-size:.85em !important;word-break:normal;white-space:pre;background:transparent;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;font-size:.85em !important;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:before,html body pre tt:before,html body pre code:after,html body pre tt:after{content:normal}html body p,html body blockquote,html body ul,html body ol,html body dl,html body pre{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body pre,html body code{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview .pagebreak,.markdown-preview .newpage{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center !important}.markdown-preview:not([for="preview"]) .code-chunk .btn-group{display:none}.markdown-preview:not([for="preview"]) .code-chunk .status{display:none}.markdown-preview:not([for="preview"]) .code-chunk .output-div{margin-bottom:16px}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,0.66);border:4px solid rgba(150,150,150,0.66);background-clip:content-box}html body[for="html-export"]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0}@media screen and (min-width:914px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{font-size:14px !important;padding:1em}}@media print{html body[for="html-export"]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for="html-export"]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,0.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,0.66);border:4px solid rgba(150,150,150,0.66);background-clip:content-box}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc ul{padding:0 1.6em;margin-top:.8em}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc li{margin-bottom:.8em}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc ul{list-style-type:none}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% -  300px);padding:2em calc(50% - 457px -  150px);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for="html-export"]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for="html-export"]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+    </head>
+    <body for="html-export">
+      <div class="mume markdown-preview  ">
+      <h1 class="mume-header" id="countdown-tutorial-tips">Countdown: Tutorial + Tips</h1>
+
+<p>To ensure you can enjoy this game maximally, here is a detailed<br>
+tutorial on it, from the basic idea to more complex mechanics.<br>
+Tips are included to help you.</p>
+<h2 class="mume-header" id="getting-started">Getting started</h2>
+
+<h3 class="mume-header" id="aim-of-the-game">Aim of the game</h3>
+
+<p>In this game, 7 random numbers are generated and using these numbers, along with<br>
+basic mathematical operators and parentheses, you must form a mathematical expression<br>
+equal to a larger target number.</p>
+<p>However, you only have <strong>30 seconds</strong>, meaning you must be quick in finding<br>
+a solution. Therefore, strong mental maths skills are highly beneficial.</p>
+<h3 class="mume-header" id="selecting-numbers">Selecting numbers</h3>
+
+<p>From the main menu, click on the large orange &apos;Play&apos; button.</p>
+<p>Now, you need to select 7 numbers to be used as the numbers you can use for<br>
+the expression to create.</p>
+<p>There are two categories of number:</p>
+<ul>
+<li>Small numbers (2-9) - each can be generated only once</li>
+<li>Big numbers (25, 50, 75, 100) - each can be generated up to twice</li>
+</ul>
+<p>Click on any orange rectangle to select a number. A small number can be selected<br>
+from the top row, and the bottom row selects a big number.</p>
+<p>The maximum number of both small and big numbers is 5, meaning there must be<br>
+at least 2 small and big numbers.</p>
+<p>After selecting 7 numbers, click on the &apos;Start&apos; button to begin the round.</p>
+<h3 class="mume-header" id="forming-an-expression-equal-to-the-target">Forming an expression equal to the target</h3>
+
+<p>Upon starting, a preliminary countdown begins (3, 2, 1, GO!). After this, the target<br>
+number is generated using a fairly complex algorithm to ensure it is possible to get<br>
+with 4 numbers, but not less (not too easy, not too hard). The target number is<br>
+between 201 and 999 (inclusive).</p>
+<p>Once displayed, the countdown begins and the timer at the bottom visibly starts<br>
+progressing. This is the 30 second timer. You must use this time to try and find a<br>
+solution (expression).</p>
+<p>Criteria for a valid solution:</p>
+<ul>
+<li>It is equal to the target number</li>
+<li>It only uses the 7 numbers provided (not all numbers need to be used)</li>
+<li>It only uses addition (+), subtraction (-), multiplication (x), division (&#xF7;),<br>
+and parentheses (which can be nested). So, exponentiation is disallowed.</li>
+</ul>
+<p>Don&apos;t forget the order of operations:</p>
+<ul>
+<li>Parentheses first</li>
+<li>Multiplication/division (left to right)</li>
+<li>Addition/subtraction (left to right)</li>
+</ul>
+<p>Here is an example of a possible round:</p>
+<pre class="language-text">You have the following numbers: 2, 4, 5, 9, 25, 75, 100
+The target is: 515
+
+Three valid solutions would be:
+- 100x5+4+9+2
+- (100-2)x5+25
+- ((2x100+75)x9+25x4)&#xF7;5
+
+An example of an invalid solution would be: 2^9+75&#xF7;25, because
+despite evaluating correctly as 515, exponentiation is used which is disallowed.
+</pre>
+<p>It is often challenging to find a solution in just 30 seconds. Here are some tips nonetheless:</p>
+<ul>
+<li>Try to get as close to the target as possible using as few numbers as possible,<br>
+so that any remaining numbers can be used to make the expression fully correct.</li>
+<li>Consider making 2 factors of the target and multiplying them. This strategy is best<br>
+if the target is a nice number, such as 240, and not 863.</li>
+<li>Don&apos;t be afraid to use parentheses. They can be extremely powerful.</li>
+<li>Do not waste time! Spend every second trying to reach a solution.</li>
+<li>Use pen and paper to help you, unless you have an excellent working memory.</li>
+<li>A calculator may seem beneficial, but this game is all about mental<br>
+maths and using a calculator may cause you to run out of time. So, train your brain<br>
+and don&apos;t rely on a calculator unless you&apos;re desperate.</li>
+<li><strong>Take breaks</strong> whenever you just cannot concentrate! Remember, despite involving<br>
+maths, you are still meant to have fun playing this game, and doing something else<br>
+when you are just not playing well is encouraged.</li>
+</ul>
+<h3 class="mume-header" id="entering-your-solution">Entering your solution</h3>
+
+<p>Once the time runs out, you will be automatically directed to enter a solution.<br>
+If you could not find a solution in time, just click on the &apos;No solution&apos; button.<br>
+Unfortunately, you lose.</p>
+<p>However, if you have successfully found a solution, congrats!<br>
+Using the buttons, enter each part of the solution into the green box<br>
+(including parentheses, operators and numbers). Try to omit useless parentheses<br>
+which do not change order of evaluation to reduce clutter. To delete a part, just<br>
+click on the button &apos;&#x2190;&apos;.</p>
+<p>Once you enter your proposed solution, click on &apos;Submit&apos;. The solution is checked,<br>
+and if indeed correct, you win! If it is wrong, you will stay where you are.<br>
+Perhaps you just made a minor mistake in the input, or your solution is outright wrong.</p>
+<h3 class="mume-header" id="end-of-the-game">End of the game</h3>
+
+<p>The round is complete! Either you win (found a solution), or lose (no solution).</p>
+<p>Below, references to stats, achievements, solution generation and history are<br>
+involved. To find out more about each, go to the corresponding parts of the tutorial.</p>
+<p>If you win, your solution is displayed and a congratulatory message is shown alongside.<br>
+Your win streak is incremented by 1, and you earn a good amount of XP just for your<br>
+solution, with extra based on factors such as:</p>
+<ul>
+<li>How many numbers used in the solution</li>
+<li>Operators used (using all operators grants a bonus 50XP)</li>
+<li>Current win streak</li>
+</ul>
+<p>But if you lose, a reassuring message is displayed, and your win streak is reset to 0.<br>
+However, you still earn 25 XP just for playing.</p>
+<p>For both outcomes, the game data is saved in history,<br>
+and any achievements earned at the end are displayed too.</p>
+<p>You then have a few navigation options:</p>
+<ul>
+<li>Generate solutions - see what amazing expressions can be formed from the 7 numbers to<br>
+equate to the target</li>
+<li>Play again - begin a new round</li>
+<li>Home - return to the main menu</li>
+</ul>
+<h2 class="mume-header" id="stats">Stats</h2>
+
+<p>Stats are data points which provide insights about your play, such as the number<br>
+of games you have played and won, and your level.</p>
+<p>Many stats are also timed, meaning you can see them based on your play in the last<br>
+24 hours, last 7 days, last 30 days, and all time.</p>
+<p>Here are the stats implemented:</p>
+<ul>
+<li>Games played - how many rounds you have completed, whether win or loss</li>
+<li>Games won - the number of wins you have achieved</li>
+<li>Operators used - how many times you have used each operator in solutions</li>
+<li>Small numbers used - how many small numbers (2-9) you have used in solutions</li>
+<li>Big numbers used - how many big numbers (25, 50, 75, 100) you have used in solutions</li>
+<li>XP earned - total XP earned from playing</li>
+<li>Level - based on XP - provides a rough indication of how much experience you have<br>
+in the game. The maximum level is 100. Each level requires 100 more XP<br>
+than the previous, starting at level 1, with 100 XP needed to reach level 2.</li>
+<li>Best win streak - the highest win streak you have ever achieved (not your current streak)</li>
+</ul>
+<h2 class="mume-header" id="solution-generation">Solution Generation</h2>
+
+<p>Humans can play this game and find nice solutions, but computer are insane,<br>
+and despite technically being super dumb, can follow a series of complex algorithms to<br>
+find godly solutions not even a genius would have a chance to see.</p>
+<p>Indeed, functionality has been added for you to generate solutions from 7 numbers<br>
+for a given target, either at the end of a round, or from history.</p>
+<p>Several options allow you to customise solution generation:</p>
+<ul>
+<li>Minimum number count - how many numbers a solution must have at least</li>
+<li>Maximum number count - how many numbers a solution can have at most</li>
+<li>Maximum solution count - how many solutions should be generated at most</li>
+<li>Parentheses - whether to allow nested parentheses or not, or disable them entirely</li>
+<li>Operators - which operators a solution can have in it</li>
+<li>Maximum seconds to generate for - this is often a somewhat slow, intensive process.<br>
+So a time limit is set to ensure the result is returned in a practical length of time,<br>
+even at the cost of possibly not generating the requested number of solutions, if at<br>
+all.</li>
+</ul>
+<p>Once the generation completes, any solutions found are displayed in the box<br>
+on the right. If no solutions are found, the box remains empty.</p>
+<h2 class="mume-header" id="game-history">Game History</h2>
+
+<p>When you complete a game, it is automatically saved into history. Then, in the<br>
+history window, you can view the recent games you have played.<br>
+Click into any of them and you get data on the game such as the 7 numbers,<br>
+the target number, the start/stop times<br>
+(in the current system time zone) and the outcome (win/loss).</p>
+<p>You can also generate solutions for any past game you select, just like at the<br>
+end of a round.</p>
+<h2 class="mume-header" id="achievements">Achievements</h2>
+
+<p>Achievements are a feature to increase motivation to play the game and provide<br>
+something in-game to work towards. They serve as evidence of your dedication,<br>
+skill and expertise in this game!</p>
+<p>The four tiers of achievement are:</p>
+<ul>
+<li>Bronze (very easy)</li>
+<li>Silver (easy)</li>
+<li>Gold (hard)</li>
+<li>Platinum (very hard)</li>
+</ul>
+<p>There are a total of <strong>32</strong> achievements of varying difficulty.</p>
+<h3 class="mume-header" id="tiered-achievements">Tiered achievements</h3>
+
+<p>4 achievements are grouped into one stat, but get progressively harder<br>
+(bronze, silver, gold, platinum). 24 achievements total.</p>
+<ul>
+<li><em>Countdown Commitment</em> - games played</li>
+<li><em>Getting good at maths!</em> - wins</li>
+<li><em>Time flies when you&apos;re having fun</em> - time played</li>
+<li><em>Expertise Development</em> - level</li>
+<li><em>Winner Winner Chicken Dinner</em> - maximum win streak</li>
+<li><em>Achievement for achievements</em> - achievements earned</li>
+</ul>
+<h3 class="mume-header" id="special-achievements">Special achievements</h3>
+
+<p>Achievements which are earned once with an appropriate tier<br>
+selected for their difficulty. 8 achievements total.</p>
+<ul>
+<li><em>Obsession!</em> - games played in the last 24 hours</li>
+<li><em>Addiction!</em> - games played in the last 7 days</li>
+<li><em>OOPS!</em> - incorrect solution</li>
+<li><em>Small numbers reign!</em> - small number use</li>
+<li><em>Brutal big numbers!</em> - big number use</li>
+<li><em>Full House!</em> - all numbers used</li>
+<li><em>Together they are strong!</em> - all operators used</li>
+<li><em>One Operator!</em> - one operator used only</li>
+</ul>
+<h2 class="mume-header" id="options">Options</h2>
+
+<p>Various settings are available to customise your in-game experience:</p>
+<ul>
+<li>Music - can either be ON/OFF, various countdown tracks available<br>
+to play during the 30 second timer</li>
+<li>Sound Effects - can either be ON/OFF</li>
+<li>Stats/Achievements/History - can either be ON/OFF. When ON, your<br>
+stats are updated, achievements are checked for, and completed games<br>
+are saved in history. None of this occurs when this setting is OFF,<br>
+and win streak is also unaffected when OFF. Also, turning this setting<br>
+OFF will not reset anything: you can turn it ON again and the previous<br>
+data will be intact.</li>
+<li>Auto generate numbers - can either be ON/OFF,<br>
+useful to automatically select 7 numbers rather than manually (great if you are lazy!)</li>
+<li>Time limit to enter solution - can either be ON/OFF, limits the length<br>
+of time you have to enter a solution before timing out and automatically losing.</li>
+</ul>
+<p>Settings can be reset to default in case you mess them up!</p>
+<p>Another option available is to completely reset your data. This means<br>
+your stats, achievements and history are wiped and basically, you<br>
+would be starting from scratch. However, please only do this if you are 100% certain,<br>
+as wiped data <strong>CANNOT BE RESTORED</strong>.</p>
+<h2 class="mume-header" id="other-important-information">Other Important Information</h2>
+
+<p>Before ending the tutorial, here are some other points to note to ensure<br>
+you gain the best experience:</p>
+<ul>
+<li><strong>No internet connection</strong> is needed to play.</li>
+<li>It is recommended you play in <strong>full-screen</strong> to prevent window sizing issues.</li>
+<li>Only <strong>one</strong> instance of the game can be running at once.</li>
+<li>Game data is stored locally, meaning if you really wanted to, you could find it<br>
+in the AppData/Local folder and create manual backups.</li>
+<li>In theory, you could cheat in this game in various different ways,<br>
+but why would you? It ruins the fun!</li>
+<li>If you mess with any of the game-related files and the game itself breaks,<br>
+congratulations! What did you expect?</li>
+<li>If any unhandled errors occur, unfortunately, the game will crash and you will<br>
+receive an error message. Sorry for the inconvenience if this occurs and you did<br>
+not tamper with the game files.</li>
+</ul>
+<h2 class="mume-header" id="conclusion">Conclusion</h2>
+
+<p>This is plenty of information for you to enjoy the game. There are a few<br>
+other tiny features which you may encounter as well, but the information<br>
+provided in this tutorial should be adequate and accurate.</p>
+<p>Overall, hopefully all this detailed information helps you navigate through<br>
+the game and play it to the best of your ability whilst maximising fun.</p>
+<p><em>Good luck, and happy solving!</em></p>
+
+      </div>
+      
+      
+    
+    
+    
+    
+    
+    
+    
+    
+  
+    </body></html>
