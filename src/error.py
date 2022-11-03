@@ -41,7 +41,8 @@ def existing_instance() -> None:
     already exists.
     """
     root = tk.Tk()
-    root.title("Application Instance Error")
+    root.title("Countdown - Application Instance Error")
+    root.iconbitmap("./images/icon.ico")
     root.tk_setPalette(background=DEFAULT_BACKGROUND, foreground=BLACK)
     if data.get_options()["sfx"]:
         secrets.choice(ERROR_SFX).play()
@@ -72,7 +73,8 @@ def unhandled_error() -> None:
     The window displayed if an unhandled error occurs in the program.
     """
     root = tk.Tk()
-    root.title("Application Error")
+    root.title("Countdown - Application Error")
+    root.iconbitmap("./images/icon.ico")
     root.tk_setPalette(background=DEFAULT_BACKGROUND, foreground=BLACK)
     if data.get_options()["sfx"]:
         secrets.choice(ERROR_SFX).play()
