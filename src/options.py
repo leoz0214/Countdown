@@ -56,7 +56,7 @@ class OptionsWindow(tk.Frame):
         self.title_label.pack(padx=10)
         self.pages_frame.pack(padx=10)
         self.navigation_frame.pack(padx=10)
-    
+
     def back(self) -> None:
         """
         Returns back to the main menu.
@@ -68,7 +68,7 @@ class OptionsWindow(tk.Frame):
         if music is not None:
             music.stop()
         menu.MainMenu(self.root).pack()
-    
+
     def save_options(self) -> None:
         """
         Saves the settings currently specified.
@@ -93,8 +93,12 @@ class OptionsWindow(tk.Frame):
             }
         }
         data.set_options(new_options)
+        music = (
+            self.pages_frame.music_frame.countdown_music_frame.current_music)
+        if music is not None:
+            music.stop()
         messagebox.showinfo("Success", "Successfully saved options.")
-    
+
     def reset_options(self) -> None:
         """
         Resets options to default, upon confirmation.
@@ -129,8 +133,7 @@ class StateOptionFrame(tk.Frame):
                 if isinstance(DEFAULT_OPTIONS[key], dict)
                 else data.get_options()[key]))
 
-        self.name_label = tk.Label(
-            self, font=ink_free(25), text=name)
+        self.name_label = tk.Label(self, font=ink_free(25), text=name)
         self.on_radiobutton = tk.Radiobutton(
             self, font=ink_free(20), text="ON", width=4, border=5,
             variable=self.on, value=True, bg=GREY, activebackground=GREEN,
@@ -139,12 +142,12 @@ class StateOptionFrame(tk.Frame):
             self, font=ink_free(20), text="OFF", width=4, border=5,
             variable=self.on, value=False, bg=GREY, activebackground=RED,
             selectcolor=RED, indicatoron=False)
-        
+
         self.name_label.grid(row=0, column=0, padx=25, pady=10)
         self.on_radiobutton.grid(row=0, column=1, padx=5, pady=10, sticky="e")
         self.off_radiobutton.grid(
             row=0, column=2, padx=5, pady=10, sticky="w")
-    
+
     def is_on(self) -> bool:
         """
         Returns the current state of the setting.
@@ -170,14 +173,14 @@ class MusicFrame(StateOptionFrame):
             self.disable()
         self.countdown_music_frame.grid(
             row=1, column=0, columnspan=3, padx=5, pady=5)
-    
+
     def enable(self) -> None:
         """
         Allows access to the countdown music setting.
         """
         for widget in self.countdown_music_frame.children.values():
             widget.config(state="normal")
-    
+
     def disable(self) -> None:
         """
         Stops access to the countdown music setting.
@@ -192,7 +195,7 @@ class CountdownMusicLabelFrame(tk.LabelFrame):
     Allows the player to choose which music to play for the
     countdown, also allowing a sample of each track.
     """
-    
+
     def __init__(self, master: MusicFrame) -> None:
         super().__init__(
             master, font=ink_free(15),
@@ -210,14 +213,14 @@ class CountdownMusicLabelFrame(tk.LabelFrame):
         # n x 5 grid of radiobuttons representing music tracks
         for i, radiobutton in enumerate(self.radiobuttons):
             radiobutton.grid(row=i//5, column=i % 5, padx=5, pady=5)
-        
+
         self.stop_button = tk.Button(
             self, font=ink_free(15), text="Stop playback", width=15, border=5,
             bg=ORANGE, activebackground=RED, command=self.stop)
         self.stop_button.grid(
             row=math.ceil(len(self.radiobuttons) / 5), column=0,
             columnspan=5, padx=5, pady=5)
-    
+
     def play(self) -> None:
         """
         Plays current selection.
@@ -225,7 +228,7 @@ class CountdownMusicLabelFrame(tk.LabelFrame):
         self.stop()
         self.current_music = COUNTDOWN_MUSIC[self.master.countdown.get()]
         self.current_music.play()
-    
+
     def stop(self) -> None:
         """
         Stops current selection.
@@ -254,14 +257,14 @@ class AutoGenerateFrame(StateOptionFrame):
             self.disable()
         self.number_counts_frame.grid(
             row=1, column=0, columnspan=3, padx=5, pady=5)
-    
+
     def enable(self) -> None:
         """
         Allows number counts to be changed.
         """
         for widget in self.number_counts_frame.children.values():
             widget.config(state="normal")
-    
+
     def disable(self) -> None:
         """
         Disallows number counts to be changed.
@@ -293,19 +296,19 @@ class AutoGenerateNumberCountsFrame(tk.Frame):
             self, font=ink_free(15), variable=self.master.max_big_numbers,
             from_=2, to=5, orient="horizontal", length=200, sliderlength=50,
             command=lambda _: self.update_min_small_number_count())
-        
+
         self.min_small_numbers_label.grid(row=0, column=0, padx=5, pady=5)
         self.min_small_numbers_scale.grid(row=0, column=1, padx=5, pady=5)
         self.max_big_numbers_label.grid(row=1, column=0, padx=5, pady=5)
         self.max_big_numbers_scale.grid(row=1, column=1, padx=5, pady=5)
-    
+
     def update_min_small_number_count(self) -> None:
         """
         Updates the minimum number of small numbers allowed.
         """
         self.master.min_small_numbers.set(
             7 - self.master.max_big_numbers.get())
-    
+
     def update_max_big_number_count(self) -> None:
         """
         Updates the maximum number of big numbers allowed.
@@ -329,7 +332,7 @@ class SolutionTimeLimitFrame(StateOptionFrame):
             command=lambda: self.minutes_scale.config(state="disabled"))
         self.minutes = tk.IntVar(
             value=data.get_options()["solution_time_limit"]["minutes"])
-        
+
         self.minutes_scale = tk.Scale(
             self, font=ink_free(15), variable=self.minutes, from_=1, to=5,
             orient="horizontal", length=200, sliderlength=40)
@@ -360,12 +363,12 @@ class ResetDataFrame(tk.Frame):
         self.reset_button = tk.Button(
             self, font=ink_free(15), text="Reset", width=10, border=3,
             bg=ORANGE, activebackground=RED, command=self.reset)
-        
+
         self.title_label.pack(padx=10, pady=10)
         self.description_label.pack(padx=10, pady=10)
         self.confirmation_entry.pack(padx=10, pady=10)
         self.reset_button.pack(padx=10, pady=10)
-    
+
     def reset(self) -> None:
         """
         Upon confirmation, resets all player data.
@@ -443,7 +446,7 @@ class OptionsNavigationFrame(tk.Frame):
         self.reset_button = tk.Button(
             self, font=ink_free(25), text="Reset", width=10, border=5,
             bg=ORANGE, activebackground=RED, command=master.reset_options)
-        
+
         self.back_button.pack(padx=10, pady=5, side="left")
         self.save_button.pack(padx=10, pady=5, side="left")
         self.reset_button.pack(padx=10, pady=5)

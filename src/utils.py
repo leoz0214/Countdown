@@ -37,7 +37,7 @@ def evaluate(expression: str) -> int | float:
     """
     Evaluates a simple maths expression with only +/-/*/'/'/().
     Order of operations followed.
-    
+
     Calls fast corresponding function written in C++
     """
     result = fast_eval(expression.encode(), 0, -1)
@@ -67,22 +67,20 @@ def days_to_seconds(days: int) -> int:
 
 def seconds_to_hhmmss(seconds: int | float) -> str:
     """
-    Converts seconds to HH:MM:SS format
+    Converts seconds to HH:MM:SS format.
     """
     seconds = int(seconds)
 
-    hours = seconds // 3600
-    minutes = (seconds % 3600) // 60
-    seconds = seconds % 60
+    hours = str(seconds // 3600).zfill(2)
+    minutes = str((seconds % 3600) // 60).zfill(2)
+    seconds = str(seconds % 60).zfill(2)
 
-    return "{}:{}:{}".format(
-        *(str(t).zfill(2) for t in (hours, minutes, seconds)))
+    return f"{hours}:{minutes}:{seconds}"
 
 
 def bool_to_state(expression: bool) -> str:
     """
-    Returns 'normal' if expression evaluates to True,
-    else 'disabled'.
+    Returns 'normal' if expression evaluates to True, else 'disabled'.
     """
     return "normal" if expression else "disabled"
 

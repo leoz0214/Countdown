@@ -34,9 +34,9 @@ class Level:
             remaining_xp -= self.required
             self.level += 1
             self.required += 100
-        
+
         self.xp = remaining_xp
-    
+
     def add_xp(self, xp: int) -> None:
         """
         Adds XP, levelling up automatically if the player reaches the
@@ -56,13 +56,10 @@ class LevelLabelFrame(tk.LabelFrame):
     Information about the player's current level and XP.
     """
 
-    def __init__(
-        self, master: tk.Frame, level_data: Level) -> None:
-
+    def __init__(self, master: tk.Frame, level_data: Level) -> None:
         super().__init__(
             master, font=ink_free(25),
             text=f"Level {level_data.level}", labelanchor="n")
-
         self.data = level_data
 
         if self.data.level < MAX_LEVEL:
@@ -71,14 +68,14 @@ class LevelLabelFrame(tk.LabelFrame):
             self.progress_label = tk.Label(
                 self, font=ink_free(15), width=15,
                 text=f"{self.data.xp} / {self.data.required} XP")
-            
+
             self.progress_bar.pack()
             self.progress_label.pack()
         else:
             self.max_level_label = tk.Label(
-                self, font=ink_free(20), text="Max Level!", fg=GREEN)        
+                self, font=ink_free(20), text="Max Level!", fg=GREEN)
             self.max_level_label.pack(padx=25, pady=25)
-    
+
     def update(self, new_level_data: Level) -> None:
         """
         Changes level display data to new level data.
@@ -89,7 +86,7 @@ class LevelLabelFrame(tk.LabelFrame):
             # No change
             self.data = new_level_data
             return
-        
+
         self.data = new_level_data
 
         if self.data.level < MAX_LEVEL:
@@ -100,9 +97,9 @@ class LevelLabelFrame(tk.LabelFrame):
             self.progress_bar.destroy()
             self.progress_label.destroy()
             self.max_level_label = tk.Label(
-                self, font=ink_free(20), text="Max Level!", fg=GREEN)        
+                self, font=ink_free(20), text="Max Level!", fg=GREEN)
             self.max_level_label.pack(padx=25, pady=25)
-        
+
 
 class LevelProgressBar(tk.Frame):
     """
@@ -112,14 +109,14 @@ class LevelProgressBar(tk.Frame):
     def __init__(self, master: LevelLabelFrame, progress: float) -> None:
         super().__init__(master)
         self.create(progress)
-    
+
     def create(self, progress: float) -> None:
         """
         Creates the progress bar.
         """
         self.canvas = widgets.ProgressBar(self, progress, 200, 8)
         self.canvas.pack(padx=25, pady=25)
-    
+
     def update(self, new_progress: float) -> None:
         """
         Changes the amount of level progress displayed.

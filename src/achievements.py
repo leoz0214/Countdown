@@ -30,7 +30,7 @@ def format_achievement(
     """
     Formats an achievement to be displayed to the player if earned.
     """
-    return "{} - {} ({}) ✓".format(name, description, tier)
+    return f"{name} - {description} ({tier}) ✓"
 
 
 def format_tiered_achievement(key: str, index: int) -> str:
@@ -39,8 +39,7 @@ def format_tiered_achievement(key: str, index: int) -> str:
     """
     return format_achievement(
         TIERED_ACHIEVEMENTS[key]["name"],
-        TIERED_ACHIEVEMENTS[key]["descriptions"][index],
-        TIERS[index])
+        TIERED_ACHIEVEMENTS[key]["descriptions"][index], TIERS[index])
 
 
 def format_special_achievement(key: str) -> str:
@@ -49,10 +48,10 @@ def format_special_achievement(key: str) -> str:
     """
     return format_achievement(
         SPECIAL_ACHIEVEMENTS[key]["name"],
-        SPECIAL_ACHIEVEMENTS[key]["description"], 
+        SPECIAL_ACHIEVEMENTS[key]["description"],
         SPECIAL_ACHIEVEMENTS[key]["tier"])
 
-    
+
 def create_tiered_achievement(
     name: str, function: Callable,
     requirements: tuple, descriptions: list[str]) -> dict:
@@ -113,18 +112,17 @@ def get_achievement_count() -> int:
     return achievement_count
 
 
-# Tiered achievements
 TIERED_ACHIEVEMENTS = {
     "games_played": create_tiered_achievement(
         "Countdown Commitment", data.get_games_played,
         (requirements := AchievementTierRequirements(10, 50, 250, 2500)),
         get_tiered_achievement_descriptions("Play {} games", requirements)),
-    
+
     "wins": create_tiered_achievement(
         "Getting good at maths!", data.get_win_count,
         (requirements := AchievementTierRequirements(5, 25, 125, 1000)),
         get_tiered_achievement_descriptions("Win {} games", requirements)),
-    
+
     "time_played": create_tiered_achievement(
         "Time flies when you're having fun", data.get_seconds_played,
         # In seconds played.
@@ -133,7 +131,7 @@ TIERED_ACHIEVEMENTS = {
             *(
                 "Play {}".format(duration) for duration in (
                     "20 minutes", "2 hours", "10 hours", "50 hours")))),
-    
+
     "level": create_tiered_achievement(
         "Expertise Development", data.get_total_xp,
         # By XP - nicer and easier to handle.
@@ -141,13 +139,13 @@ TIERED_ACHIEVEMENTS = {
             *(level.get_total_xp_for_level(lvl) for lvl in (5, 12, 25, 75))),
         AchievementTierDescriptions(
             *("Reach level {}".format(lvl) for lvl in (5, 12, 25, 75)))),
-    
+
     "best_streak": create_tiered_achievement(
         "Winner Winner Chicken Dinner", data.get_best_win_streak,
         (requirements := AchievementTierRequirements(2, 5, 20, 78)),
         get_tiered_achievement_descriptions(
             "Reach a win streak of {}", requirements)),
-    
+
     "achievements": create_tiered_achievement(
         "Achievement for achievements", get_achievement_count,
         (requirements := AchievementTierRequirements(7, 14, 21, 28)),
@@ -164,28 +162,28 @@ SPECIAL_ACHIEVEMENTS = {
         "Addiction!", "Play 250 games in the span of 7 days.", "gold"),
 
     "incorrect_solution": create_special_achievement(
-        "OOPS!", "Submit an incorrect solution", "bronze"),
+        "OOPS!", "Submit an incorrect solution.", "bronze"),
 
     "small_numbers": create_special_achievement(
         "Small numbers reign!",
-        "Find a solution using exactly 5 small numbers and 0 big numbers",
+        "Find a solution using exactly 5 small numbers and 0 big numbers.",
         "gold"),
 
     "big_numbers": create_special_achievement(
         "Brutal big numbers!",
-        "Find a solution using exactly 5 big numbers and 0 small numbers",
+        "Find a solution using exactly 5 big numbers and 0 small numbers.",
         "gold"),
 
     "all_numbers": create_special_achievement(
         "Full House!",
-        "Find a solution using all the numbers provided", "silver"),
+        "Find a solution using all the numbers provided.", "silver"),
 
     "all_operators": create_special_achievement(
         "Together they are strong!",
-        "Use all operators in a solution", "silver"),
+        "Use all operators in a solution.", "silver"),
 
     "one_operator": create_special_achievement(
-        "One Operator!", "Find a solution using only one operator", "gold")
+        "One Operator!", "Find a solution using only one operator.", "gold")
 }
 
 
@@ -201,24 +199,24 @@ class AchievementsWindow(tk.Frame):
 
         self.title_label = tk.Label(
             self, font=ink_free(75, True), text="Achievements")
-        
+
         self.pages_frame = AchievementsPagesFrame(self)
-        
+
         self.back_button = tk.Button(
             self, font=ink_free(25), text="Back", width=10, border=5,
             bg=ORANGE, activebackground=RED, command=self.back)
-        
+
         self.title_label.pack(padx=10, pady=5)
         self.pages_frame.pack(padx=10, pady=5)
         self.back_button.pack(padx=10, pady=5)
-    
+
     def back(self) -> None:
         """
         Returns back to the main menu.
         """
         self.destroy()
         menu.MainMenu(self.root).pack()
-    
+
 
 class TieredAchievementLabelFrame(tk.LabelFrame):
     """
@@ -230,7 +228,7 @@ class TieredAchievementLabelFrame(tk.LabelFrame):
         super().__init__(
             master, font=ink_free(25, italic=True),
             text=achievement["name"], labelanchor="n")
-        
+
         self.result = achievement["function"]()
         # Final value of requirement is indeed the
         # requirement for the next tier.
@@ -245,7 +243,7 @@ class TieredAchievementLabelFrame(tk.LabelFrame):
             self.index = None
             self.config(fg=PLATINUM)
         self.requirement = requirement
-        
+
         if self.index is not None:
             self.description_label = tk.Label(
                 self, font=ink_free(15),
@@ -254,14 +252,13 @@ class TieredAchievementLabelFrame(tk.LabelFrame):
             self.description_label = tk.Label(
                 self, font=ink_free(15, True), fg=GREEN,
                 text=f"{achievement['descriptions'][-1]} [Complete!]")
-        
+
         self.progress_bar = widgets.ProgressBar(
             self, min(1, round(self.result / self.requirement, 10)), 200, 8)
-        
         self.progress_label = tk.Label(
             self, font=ink_free(15),
             text=f"{self.result} / {self.requirement}")
-        
+
         self.description_label.pack(padx=10)
         self.progress_bar.pack(padx=10, pady=3)
         self.progress_label.pack(padx=10)
@@ -308,13 +305,13 @@ class SpecialAchievementLabelFrame(tk.LabelFrame):
         super().__init__(
             master, font=ink_free(25, italic=True),
             text=achievement["name"], labelanchor="n")
-        
+
         self.description_label = tk.Label(
             self, font=ink_free(15),
             text=f"{achievement['description']} ({achievement['tier']})")
-        
-        complete = data.get_special_achievements()[key]
-        if complete:
+
+        is_complete = data.get_special_achievements()[key]
+        if is_complete:
             self.config(
                 fg=(
                     BRONZE if achievement["tier"] == "bronze" else
@@ -325,7 +322,7 @@ class SpecialAchievementLabelFrame(tk.LabelFrame):
         else:
             self.status_label = tk.Label(
                 self, font=ink_free(15), text="Incomplete", fg=RED)
-        
+
         self.description_label.pack(padx=10, pady=5)
         self.status_label.pack(padx=10, pady=5)
 

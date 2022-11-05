@@ -42,8 +42,8 @@ class SolutionsFrame(tk.Frame):
 
     def __init__(
         self, root: tk.Tk, corresponding_frame: tk.Frame,
-        numbers: list[int], target: int) -> None:
-
+        numbers: list[int], target: int
+    ) -> None:
         super().__init__(root)
         self.root = root
         self.frame = corresponding_frame
@@ -75,16 +75,11 @@ class SolutionsFrame(tk.Frame):
         self.solutions_listbox.grid(row=2, column=2, padx=10, pady=5)
         self.navigation_frame.grid(
             row=3, column=0, columnspan=3, padx=10, pady=10)
-    
+
     def generate(self) -> None:
         """
         Generates solutions and displays them in the listbox.
         """
-        SOLUTION_FOUND_SFX.stop()
-        NO_SOLUTION_FOUND_SFX.stop()
-        self.solutions_listbox.delete(0, "end")
-        self.navigation_frame.cancel_generate_button()
-
         options = self.solutions_options_frame
         min_number_count = options.min_number_count_frame.count.get()
         max_number_count = options.max_number_count_frame.count.get()
@@ -98,30 +93,37 @@ class SolutionsFrame(tk.Frame):
             for operator, state in options.operators_frame.operators.items()
             if state.get()).replace("x", "*").replace("÷", "/")
         seconds_limit = options.seconds_limit_frame.seconds.get()
-            
+
         settings = generate.SolutionGenerationSettings(
-            min_number_count, max_number_count, max_solution_count,
-            nested_parentheses, operators, seconds_limit
-        )
+                min_number_count, max_number_count, max_solution_count,
+                nested_parentheses, operators, seconds_limit)
         self.settings = settings
-        result = generate.generate_solutions(
+
+        SOLUTION_FOUND_SFX.stop()
+        NO_SOLUTION_FOUND_SFX.stop()
+        self.solutions_listbox.delete(0, "end")
+        self.navigation_frame.cancel_generate_button()
+
+        solutions = generate.generate_solutions(
             self.numbers, self.target, settings)
         if settings.cancel:
             return
-        
+
         self.navigation_frame.reset_generate_button()
-        
-        if result:
-            self.solutions_listbox.insert(0, *result)
+
+        if solutions:
+            self.solutions_listbox.insert(0, *solutions)
             SOLUTION_FOUND_SFX.play()
         else:
             NO_SOLUTION_FOUND_SFX.play()
-    
+
     def cancel(self) -> None:
         """
         Cancels generation.
         """
+        # Settings cancelled so thread does not return any solutions.
         self.settings.cancel = True
+        # Does not affect actual settings object.
         self.settings = None
         self.navigation_frame.reset_generate_button()
 
@@ -155,7 +157,7 @@ class SolutionsOptionsFrame(tk.Frame):
         self.parentheses_frame.pack(padx=10)
         self.operators_frame.pack(padx=10)
         self.seconds_limit_frame.pack(padx=10)
-    
+
     def check_number_counts(self, change: Literal["min", "max"]) -> None:
         """
         Ensures the maximum number count is increased to at least the
@@ -190,20 +192,20 @@ class SolutionNumberCountFrame(tk.Frame):
         self.count = tk.IntVar(
             self, MIN_SOLUTION_NUMBERS_COUNT if self.bound == "min"
             else MAX_SOLUTION_NUMBERS_COUNT)
-        
+
         self.count_scale = tk.Scale(
             self, font=ink_free(15), length=200,
             from_=MIN_SOLUTION_NUMBERS_COUNT, to=MAX_SOLUTION_NUMBERS_COUNT,
             orient="horizontal", variable=self.count, sliderlength=50,
             command=lambda _: self.master.check_number_counts(self.bound))
-        
+
         self.label.pack(side="left", padx=10)
         self.count_scale.pack(padx=10)
 
 
 class MaxSolutionsFrame(tk.Frame):
     """
-    Holds maximum number of solutions to generate setting.
+    Holds the maximum number of solutions to generate setting.
     """
 
     def __init__(self, master: SolutionsOptionsFrame) -> None:
@@ -211,12 +213,11 @@ class MaxSolutionsFrame(tk.Frame):
         self.count = tk.IntVar(self, DEFAULT_SOLUTIONS_COUNT)
         self.label = tk.Label(
             self, font=ink_free(15, True), text="Maximum solution count:")
-        
         self.count_scale = tk.Scale(
             self, font=ink_free(15), length=200, orient="horizontal",
             from_=MIN_SOLUTIONS_COUNT, to=MAX_SOLUTIONS_COUNT,
             variable=self.count)
-        
+
         self.label.pack(side="left", padx=10)
         self.count_scale.pack(padx=10)
 
@@ -279,12 +280,11 @@ class SolutionsSecondsLimitFrame(tk.Frame):
             self, font=ink_free(15, True),
             text="Maximum seconds to generate for:")
         self.seconds = tk.IntVar(self, DEFAULT_SOLUTIONS_SECONDS)
-
         self.seconds_scale = tk.Scale(
             self, font=ink_free(15), length=200, orient="horizontal",
             from_=MIN_SOLUTIONS_SECONDS, to=MAX_SOLUTIONS_SECONDS,
             variable=self.seconds)
-        
+
         self.label.pack(side="left", padx=10)
         self.seconds_scale.pack(padx=10)
 
@@ -309,10 +309,10 @@ class SolutionsNavigationFrame(tk.Frame):
             self, font=ink_free(25), text="Back", width=15, border=3,
             bg=ORANGE, activebackground=GREEN,
             command=master.frame.exit_solutions)
-        
+
         self.generate_button.pack(side="left", padx=10)
         self.back_button.pack(padx=10)
-    
+
     def reset_generate_button(self) -> None:
         """
         Resets the generate button to its normal state.
@@ -321,7 +321,7 @@ class SolutionsNavigationFrame(tk.Frame):
             text="Generate", bg=ORANGE, activebackground=GREEN,
             command=lambda: threading.Thread(
                 target=self.master.generate, daemon=True).start())
-    
+
     def cancel_generate_button(self) -> None:
         """
         Turns the generate button to a cancel button.

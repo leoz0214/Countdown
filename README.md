@@ -11,7 +11,6 @@ is linked with the game show, but with some slight differences, such as having *
 ## Tutorial
 
 Below is the link to the detailed, extensive tutorial on the game.
-
 [Tutorial](TUTORIAL.md)
 
 ## Why play?

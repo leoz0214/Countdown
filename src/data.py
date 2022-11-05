@@ -101,7 +101,7 @@ def get_additive_data_functions(
     Creates simple additive data functions (for adding to a number).
     """
     @check_folder_exists(folder)
-    def get() -> int | float:
+    def get() -> data_type:
         try:
             with open(file, "rb") as f:
                 value = data_type(f.read())
@@ -115,7 +115,7 @@ def get_additive_data_functions(
             return 0
 
     @check_folder_exists(folder)
-    def add(value: int | float) -> None:
+    def add(value: data_type) -> None:
         new = get() + value
         with open(file, "wb") as f:
             f.write(str(new).encode())
@@ -166,7 +166,6 @@ def get_operators_used() -> dict[str, int]:
     try:
         with open(OPERATORS_USED_FILE, "r", encoding="utf8") as f:
             operators_used = json.load(f)
-        # Checks data is valid.
         if (
             not isinstance(operators_used, dict) or len(operators_used) != 4
             or "".join(operators_used.keys()) != OPERATORS or
@@ -203,7 +202,6 @@ def get_recent_numbers() -> list[int]:
     try:
         with open(RECENT_NUMBERS_FILE, "r", encoding="utf8") as f:
             recent = json.load(f)
-        # Checks if recent numbers are valid.
         if (
             not isinstance(recent, list)
             or len(recent) > MAX_RECENT_NUMBERS_COUNT
@@ -214,7 +212,6 @@ def get_recent_numbers() -> list[int]:
             raise ValueError
         return recent
     except (FileNotFoundError, ValueError):
-        # File does not exist or is corrupt.
         with open(RECENT_NUMBERS_FILE, "w", encoding="utf8") as f:
             json.dump([], f)
         return []
@@ -225,8 +222,7 @@ def add_recent_number(number: int) -> None:
     """
     Adds a randomly generated target number to the recent numbers.
     """
-    recent = get_recent_numbers()
-    recent.insert(0, number)
+    recent = [number] + get_recent_numbers()
     if len(recent) > MAX_RECENT_NUMBERS_COUNT:
         recent.pop()
     with open(RECENT_NUMBERS_FILE, "w", encoding="utf8") as f:
@@ -265,14 +261,14 @@ def remove_expired_games(
                 # Can now just continue - all expired files removed.
                 files = files[index:]
                 break
-            else:
-                os.remove(files[index])
-                # Restart the process.
-                files = files[index + 1:]
-                index = len(files) // 2
-                found_expired = False
-                continue
-            
+
+            os.remove(files[index])
+            # Restart the process.
+            files = files[index + 1:]
+            index = len(files) // 2
+            found_expired = False
+            continue
+
         if not index or not files:
             break
         index //= 2
@@ -290,19 +286,20 @@ def get_game_data() -> list[dict]:
             sorted(os.listdir(GAME_DATA_FOLDER), key=int)))
         if not files:
             return []
-        
+
         # If maximum number of game data with n files is greater
         # than max, check to remove expired data.
-        # n files: 1 + 100 * (n - 2) + 1
         if len(files) * MAX_GAME_DATA_PER_FILE > MAX_ALLOWED_GAME_DATA:
             with gzip.open(files[-1], "rt", encoding="utf8") as f:
                 last_file_game_data_count = len(json.load(f))
-            
+
             # Number of ending files guaranteed to be allowed to stay.
             allowed_ending_file_count = (
                 (MAX_ALLOWED_GAME_DATA - last_file_game_data_count)
                 // MAX_GAME_DATA_PER_FILE) + 1
-            
+
+            allowed_files = files[-allowed_ending_file_count:]
+
             # How far the newest uncertain file may require removal.
             before_allowed_possibly_expired_data_count = (
                 (MAX_ALLOWED_GAME_DATA -
@@ -310,9 +307,7 @@ def get_game_data() -> list[dict]:
                     (MAX_ALLOWED_GAME_DATA // MAX_GAME_DATA_PER_FILE - 1)
                     * MAX_GAME_DATA_PER_FILE)
                 ) - (MAX_GAME_DATA_PER_FILE - last_file_game_data_count))
-            
-            allowed_files = files[-allowed_ending_file_count:]
-        
+
             files = remove_expired_games(
                 files[:-allowed_ending_file_count],
                 before_allowed_possibly_expired_data_count) + allowed_files
@@ -320,8 +315,7 @@ def get_game_data() -> list[dict]:
         game_data = []
         for file in files:
             with gzip.open(file, "rt", encoding="utf8") as f:
-                data = json.load(f)
-            game_data.extend(data)
+                game_data.extend(json.load(f))
         return game_data
     except Exception:
         # Corruption
@@ -362,24 +356,20 @@ def get_special_achievements() -> dict[str, str]:
     If a special achievement is complete, it will have a value of True,
     else False.
     """
-    # To prevent circular import.
+    # Not imported at the top of the file to prevent circular import.
     from achievements import SPECIAL_ACHIEVEMENTS
     try:
         with open(SPECIAL_ACHIEVEMENTS_FILE, "r", encoding="utf8") as f:
             special_achievements = json.load(f)
-        
-        # Checks data is as expected.
-        if not isinstance(special_achievements, dict):
-            raise ValueError
-        if len(special_achievements) != len(SPECIAL_ACHIEVEMENTS):
-            raise ValueError
-        # Checks keys are correct and values are all booleans.
-        if any(
-            actual_key != expected_key
-            or not isinstance(special_achievements[actual_key], bool)
-            for actual_key, expected_key in zip(
-                special_achievements, SPECIAL_ACHIEVEMENTS
-            )
+
+        if (
+            not isinstance(special_achievements, dict)
+            or len(special_achievements) != len(SPECIAL_ACHIEVEMENTS)
+            or any(
+                actual_key != expected_key
+                or not isinstance(special_achievements[actual_key], bool)
+                for actual_key, expected_key in zip(
+                    special_achievements, SPECIAL_ACHIEVEMENTS))
         ):
             raise ValueError
         return special_achievements
@@ -398,7 +388,7 @@ def get_special_achievements() -> dict[str, str]:
 def complete_special_achievement(key: str) -> bool:
     """
     Sets a special achievement to True if not already.
-    Returns True if the change was made, else False
+    Returns True if the change was made, else False.
     """
     special_achievements = get_special_achievements()
     if special_achievements[key]:
@@ -414,25 +404,25 @@ def options_dict_is_valid(options: dict, expected: dict) -> bool:
     Checks if the options dict (or any nested ones) is as expected
     (same keys in the correct order, same value types).
     """
-    from options import COUNTDOWN_MUSIC
+    from options import COUNTDOWN_MUSIC # Again, prevents circular import.
     if len(options) != len(expected):
         return False
     for key, expected_key in zip(options, expected):
-        if key != expected_key:
-            return False
-        if key == "countdown" and options[key] not in COUNTDOWN_MUSIC:
+        if (
+            (key != expected_key) or
             # Invalid music file.
-            return False
-        if key == "min_small" and not 2 <= options[key] <= 5:
-            return False
-        if key == "minutes" and not 1 <= options[key] <= 5:
+            (key == "countdown" and options[key] not in COUNTDOWN_MUSIC) or
+            (key == "min_small" and not 2 <= options[key] <= 5) or
+            (key == "minutes" and not 1 <= options[key] <= 5)
+        ):
             return False
     for value, default_value in zip(
         options.values(), expected.values()
     ):
-        if type(value) != type(default_value):
+        if type(value) is not type(default_value):
             return False
         if isinstance(default_value, dict):
+            # Recursively checks nested dicts are also valid.
             if not options_dict_is_valid(value, default_value):
                 return False
     return True
@@ -464,7 +454,7 @@ def set_options(options: dict) -> None:
     """
     with open(OPTIONS_FILE, "w", encoding="utf8") as f:
         json.dump(options, f)
-            
+
 
 @check_folder_exists(TEMPORARY_FOLDER)
 def create_temp_folder() -> None:

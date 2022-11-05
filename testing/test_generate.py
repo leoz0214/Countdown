@@ -1,8 +1,6 @@
 import unittest
-import shutil
 import sys
 import secrets
-from contextlib import suppress
 
 sys.path.extend((".", "./src"))
 
@@ -32,16 +30,12 @@ def generate_numbers():
 class TestGenerate(unittest.TestCase):
 
     def test_generate_number(self):
-        with suppress(FileNotFoundError):
-            shutil.rmtree(data.FOLDER)
-
+        data.reset_data()
         numbers = generate_numbers()
-
         for _ in range(30):
             number = generate.generate_number(numbers)
             self.assertTrue(201 <= number <= 999 and isinstance(number, int))
-
-        shutil.rmtree(data.FOLDER)
+        data.reset_data()
     
     def test_generate_solutions(self):
         numbers = generate_numbers()

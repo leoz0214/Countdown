@@ -46,7 +46,7 @@ def get_all_stats(games: list[dict], seconds: int) -> dict:
     Maximum number of seconds in the past must be specified so that
     time played may only include part of the oldest game.
     """
-    data = {
+    stats_data = {
         "games_played": len(games),
         "wins": 0,
         "seconds_played": 0,
@@ -58,7 +58,7 @@ def get_all_stats(games: list[dict], seconds: int) -> dict:
     current_time = time.time()
     for i, game in enumerate(games):
         if game["is_win"]:
-            data["wins"] += 1
+            stats_data["wins"] += 1
 
         if i == 0 and game["start_time"] < current_time - seconds:
             # Oldest game only includes the time it is within the
@@ -66,20 +66,21 @@ def get_all_stats(games: list[dict], seconds: int) -> dict:
             # E.g a game was played from t = 0s to t = 100s
             # Current t = 150s
             # Within the last 100s, the game was played for only 50s.
-            data["seconds_played"] += (
+            stats_data["seconds_played"] += (
                 game["stop_time"] - (current_time - seconds))
         else:
-            data["seconds_played"] += (game["stop_time"] - game["start_time"])
+            stats_data["seconds_played"] += (
+                game["stop_time"] - game["start_time"])
 
         for operator, count in game["operator_counts"].items():
-            data["operators_used"][operator] += count
-        
-        data["big_numbers"] += game["big_numbers"]
-        data["small_numbers"] += game["small_numbers"]
-        data["xp_earned"] += game["xp_earned"]
-    
-    return data
-        
+            stats_data["operators_used"][operator] += count
+
+        stats_data["big_numbers"] += game["big_numbers"]
+        stats_data["small_numbers"] += game["small_numbers"]
+        stats_data["xp_earned"] += game["xp_earned"]
+
+    return stats_data
+
 
 class StatisticsWindow(tk.Frame):
     """
@@ -95,7 +96,7 @@ class StatisticsWindow(tk.Frame):
         if len(last_30_days) <= data.MAX_ALLOWED_GAME_DATA:
             # Possibly over 30 days old.
             last_30_days = filter_by_time(last_30_days, days_to_seconds(30))
-        
+
         last_7_days = filter_by_time(last_30_days, days_to_seconds(7))
         last_24_hours = filter_by_time(last_7_days, days_to_seconds(1))
 
@@ -109,31 +110,31 @@ class StatisticsWindow(tk.Frame):
         self.pages_frame = StatisticsPagesFrame(
             self, page_number,
             last_24_hours_data, last_7_days_data, last_30_days_data)
-        
+
         self.back_button = tk.Button(
             self, font=ink_free(25), width=10, border=5, text="Back",
             bg=ORANGE, activebackground=RED, command=self.back)
-        
+
         self.refresh_button = tk.Button(
             self, font=ink_free(25), width=10, border=5, text="Refresh",
             bg=ORANGE, activebackground=GREEN, command=self.refresh)
-        
+
         self.title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
         self.pages_frame.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
         self.back_button.grid(row=2, column=0, padx=10, pady=10, sticky="e")
         self.refresh_button.grid(
             row=2, column=1, padx=10, pady=10, sticky="w")
-    
+
     def back(self) -> None:
         """
         Returns back to the main menu.
         """
         self.destroy()
         menu.MainMenu(self.root).pack()
-    
+
     def refresh(self) -> None:
         """
-        Refresh statistics (time changes).
+        Refresh statistics to account for a change in time.
         """
         self.destroy()
         StatisticsWindow(self.root, self.pages_frame.current_page).pack()
@@ -168,7 +169,7 @@ class TimedStatisticLabelFrame(tk.LabelFrame):
                     text=value, width=statistic_width, anchor="e")
             )
             for value, category in zip(values, TIME_CATEGORIES)]
-        
+
         for row, (category, value) in enumerate(self.parts):
             category.grid(row=row, column=0, padx=5, pady=5)
             value.grid(row=row, column=1, padx=5, pady=5)
@@ -193,7 +194,7 @@ class OperatorsUsedLabelFrame(tk.LabelFrame):
             tk.Label(
                 self, font=ink_free(15, True), width=3,
                 text=operator, anchor="e") for operator in OPERATORS]
-        
+
         values = (last_24_hours, last_7_days, last_30_days, all_time)
         self.parts = [
             [
@@ -205,10 +206,9 @@ class OperatorsUsedLabelFrame(tk.LabelFrame):
                     self, font=ink_free(10), text=count, anchor="e", width=8)
                 for count in value.values()]
             for value, category in zip(values, TIME_CATEGORIES)]
-        
+
         for column, heading in enumerate(operator_headings, 1):
             heading.grid(row=0, column=column)
-        
         for row, part in enumerate(self.parts, 1):
             for column, label in enumerate(part):
                 if column == 0:
@@ -227,7 +227,7 @@ class BestWinStreakLabelFrame(tk.LabelFrame):
         super().__init__(
             master, font=ink_free(25, True),
             text="Best win streak", labelanchor="n", padx=10, pady=10)
-        
+
         self.best_win_streak_label = tk.Label(
             self, font=ink_free(75), text=best_streak, width=6)
         self.best_win_streak_label.pack()
@@ -253,12 +253,12 @@ class StatisticsPagesFrame(widgets.PagesFrame):
             last_24_hours_data["games_played"],
             last_7_days_data["games_played"],
             last_30_days_data["games_played"], data.get_games_played())
-        
+
         games_won_frame = TimedStatisticLabelFrame(
             first_page, "Games won", 10,
             last_24_hours_data["wins"], last_7_days_data["wins"],
             last_30_days_data["wins"], data.get_win_count())
-        
+
         time_played_frame = TimedStatisticLabelFrame(
             first_page, "Time played (HH:MM:SS)", 10,
             seconds_to_hhmmss(last_24_hours_data["seconds_played"]),
@@ -288,12 +288,12 @@ class StatisticsPagesFrame(widgets.PagesFrame):
             last_24_hours_data["big_numbers"],
             last_7_days_data["big_numbers"],
             last_30_days_data["big_numbers"], data.get_big_numbers_used())
-        
+
         operators_used_frame.pack(side="left", padx=10, pady=10)
         small_numbers_used_frame.pack(side="left", padx=10, pady=10)
         big_numbers_used_frame.pack(padx=10, pady=10)
         self.add(second_page)
-    
+
         third_page = tk.Frame(self)
         xp_earned_frame = TimedStatisticLabelFrame(
             third_page, "XP earned", 10,

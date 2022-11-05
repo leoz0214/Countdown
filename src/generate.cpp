@@ -6,7 +6,6 @@ along with solution generation.
 #include <string>
 #include <set>
 #include <string.h>
-#include <cmath>
 #include <algorithm>
 #include <random>
 #include <fstream>
@@ -20,9 +19,7 @@ extern "C" {
         int numbers_array[], int number_count, int target,
         char operators_c_str[], int parentheses_setting, char filename[]
     );
-    __declspec(dllexport) double eval(
-        char expression[], int first, int last
-    );
+    __declspec(dllexport) double eval(char expression[], int first, int last);
 }
 
 
@@ -59,12 +56,9 @@ bool char_in_string(char c, char str[], int length) {
 // Joins STL strings in a vector with a given separator.
 std::string
 join_strings(std::vector<std::string> &vector, std::string sep = "") {
-    std::string result = "";
-    for (std::string str : vector) {
-        result += str + sep;
-    }
-    for (int i = 0; i < sep.length(); i++) {
-        result.pop_back();
+    std::string result = vector[0];
+    for (int i = 1; i < vector.size(); i++) {
+        result += vector[i] + sep;
     }
     return result;
 }
@@ -104,17 +98,17 @@ std::vector<std::string> string_product(std::string str, int repeat) {
 }
 
 
-// Gets permutations of a vector of length n.
+// Gets permutations of a vector of length n, recursively.
 std::vector<std::vector<int>>
 permutations(std::vector<int> &vector, int length) {
     std::vector<std::vector<int>> result;
-    std::vector<int> temp_vector, vector_part;
     if (length == 1) {
         for (int value : vector) {
             result.push_back((std::vector<int>) {value});
         }
         return result;
     }
+    std::vector<int> temp_vector, vector_part;
     for (int i = 0; i < vector.size(); i++) {
         vector_part.clear();
         for (int j = 0; j < vector.size(); j++) {
@@ -144,7 +138,7 @@ int generate_random_number(int minimum, int maximum) {
 }
 
 
-// Add or subtract the number? Or is it the first?
+// For eval: add or subtract the number? Or is it the first?
 void add_or_subtract(double &total, int previous_is_add, double number) {
     if (previous_is_add == -1) {
         // Start of expression - first number
@@ -153,6 +147,7 @@ void add_or_subtract(double &total, int previous_is_add, double number) {
         // Add
         total += number;
     } else {
+        // Subtract
         total -= number;
     }
 }
@@ -177,10 +172,9 @@ double eval(char expression[], int first, int last) {
     double result;
 
     while (i <= end) {
-        if (expression[i] >= '0' && expression[i] <= '9') {
-            // Digit
-            number = (number * 10 * (number != -1)) + expression[i] - 48;
-            i++;
+        if (expression[i] >= '0') {
+            // Digit (other characters are all less than '0')
+            number = (number * 10 * (number != -1)) + expression[i++] - 48;
             just_evaluated_parentheses = false;
         } else if (expression[i] == '(') {
             // Parentheses expression (evaluate recursively)
@@ -194,12 +188,11 @@ double eval(char expression[], int first, int last) {
                     nested--;
                 }
             }
-
             result = eval(expression, i+1, i+r-1);
             previous_number = result;
             if (std::isnan(result)) {
                 // Invalid
-                return nan("0x12345");
+                return nan("");
             }
             if (is_multiplying) {
                 if (multiplying_and_dividing_total != 0) {
@@ -210,7 +203,7 @@ double eval(char expression[], int first, int last) {
             } else if (is_dividing)  {
                 if (result == 0) {
                     // Cannot divide by 0
-                    return nan("0x12345");
+                    return nan("");
                 } else if (multiplying_and_dividing_total != 0) {
                     multiplying_and_dividing_total /= result;
                 }
@@ -222,7 +215,7 @@ double eval(char expression[], int first, int last) {
         } else {
             // Operator
             if (is_dividing && number == 0 && !just_evaluated_parentheses) {
-                return nan("0x12345");
+                return nan("");
             } else if (number != -1) {
                 if (is_multiplying) {
                     multiplying_and_dividing_total *= number;
@@ -265,7 +258,7 @@ double eval(char expression[], int first, int last) {
     }
 
     if (is_dividing && number == 0 && !just_evaluated_parentheses) {
-        return nan("0x12345");
+        return nan("");
     } else if (number != -1) {
         // Final number
         if (is_multiplying) {
@@ -316,12 +309,12 @@ StartParts get_starting_positions(std::vector<int> &numbers) {
 // Checks if there is any need to evaluate an expression
 // with parentheses, as evaluation is expensive in terms of time
 // and duplicate solutions are unwanted, so:
-// - There is multiplication or division; and
+// - There is multiplication or division;
+// - There is addition or subtraction; and
 // - All of the parentheses change evaluation
 // Especially important for a large number of expression parts.
-bool check_to_evaluate(
-    std::string &operators, std::vector<std::string> &parts
-) {
+bool
+check_to_evaluate(std::string &operators, std::vector<std::string> &parts) {
     if (!char_in_string('*', operators) && !char_in_string('/', operators)) {
         // No point in evaluating only +/- with any parentheses.
         return false;
@@ -373,7 +366,8 @@ bool check_to_evaluate(
                     return false;
                 }
                 opened--;
-            } else if (part[0] < '0' || part[0] > '9') {
+            } else if (part[0] < '0') {
+                // Operator or parenthesis (less than '0')
                 if (
                     char_in_string(
                         operators[operator_index++], add_subtract, 2)
@@ -381,7 +375,7 @@ bool check_to_evaluate(
                     has_add_or_subtract[has_add_or_subtract_index-1] = true;
                 }
             }
-        } else if (part[0] < '0' || part[0] > '9')  {
+        } else if (part[0] < '0')  {
             // Increment to the next operator.
             operator_index++;
         }
@@ -433,6 +427,7 @@ generate_parentheses_positions(int number_count) {
 }
 
 
+// Pre-generated for performance reasons.
 std::vector<std::vector<Parentheses>> PARENTHESES[8] = {
     generate_parentheses_positions(0), generate_parentheses_positions(1),
     generate_parentheses_positions(2), generate_parentheses_positions(3),
@@ -503,7 +498,6 @@ void add_parentheses(
                     deeper_operator_indexes, operators_product,
                     new_numbers);
             }
-
             for (std::string operators : operators_product) {
                 if (!check_to_evaluate(operators, deeper_current)) {
                     continue;
@@ -554,7 +548,6 @@ void add(
                 parentheses, current, number_indexes,
                 operator_indexes, operators_product, to_add);
         }
-
         for (std::string operators : operators_product) {
             if (!check_to_evaluate(operators, current)) {
                 continue;
@@ -757,7 +750,6 @@ void get_solution(
             return;
         }
     }
-
     if (parentheses_setting == -1) {
         return;
     }
@@ -782,7 +774,6 @@ void get_solution(
                 return;
             }
         }
-
         for (std::string operators : operators_product) {
             if (!check_to_evaluate(operators, current)) {
                 continue;

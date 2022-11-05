@@ -29,8 +29,8 @@ class SolutionGenerationSettings:
     def __init__(
         self, min_number_count: int, max_number_count: int,
         max_solution_count: int, nested_parentheses: bool | None,
-        operators: str, seconds_limit: int) -> None:
-
+        operators: str, seconds_limit: int
+    ) -> None:
         self.min_number_count = min_number_count
         self.max_number_count = max_number_count
         self.max_solution_count = max_solution_count
@@ -44,8 +44,7 @@ class SolutionGenerationSettings:
 
 def generate_number(numbers: list[int]) -> int:
     """
-    Gets a random suitable number
-    from 201-999 for the player to try and get.
+    Gets a random target suitable number from 201 to 999.
     """
     recent = data.get_recent_numbers()
     result = genlib.generate_number(
@@ -95,15 +94,15 @@ def generate_solutions(
 
         result = None
         with suppress(FileNotFoundError):
-            with open(filename, encoding="utf8") as f:
+            with open(filename, "r", encoding="utf8") as f:
                 result = f.read()
             os.remove(filename)
 
         if result:
             result = result.replace("*", "x").replace("/", "÷")
             solutions.append(result)
-        
+
         if settings.cancel:
             return []
-                
+
     return solutions if not settings.cancel else []

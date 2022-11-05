@@ -39,7 +39,7 @@ class HistoryWindow(tk.Frame):
         if self.recent_games:
             self.recent_game_frame = None
             self.recent_games_frame = RecentGamesFrame(self)
-            
+
             self.title_label.grid(row=0, padx=10)
             self.recent_games_frame.grid(row=1, padx=10, pady=5)
             self.back_button.grid(row=3, padx=10, pady=5)
@@ -48,7 +48,7 @@ class HistoryWindow(tk.Frame):
                 self, font=ink_free(75),
                 text="No history yet!\nPlay a round!", fg=RED)
             self.back_button.config(font=ink_free(25))
-            
+
             self.title_label.pack(padx=100, pady=25)
             self.message_label.pack(padx=100, pady=25)
             self.back_button.pack(padx=100, pady=25)
@@ -76,7 +76,7 @@ class HistoryWindow(tk.Frame):
         self.pack_forget()
         self.solutions_frame.pack()
         self.root.title("Countdown - History - Solutions")
-    
+
     def exit_solutions(self) -> None:
         """
         Returns to the main game over screen upon
@@ -89,7 +89,7 @@ class HistoryWindow(tk.Frame):
         self.solutions_frame.pack_forget()
         self.root.title("Countdown - History")
         self.pack()
-    
+
     def close(self) -> None:
         """
         Deselects the current recent game from the listbox
@@ -98,7 +98,7 @@ class HistoryWindow(tk.Frame):
         self.recent_games_frame.listbox.select_clear(0, "end")
         self.recent_game_frame.destroy()
         self.solutions_frame.destroy()
-    
+
     def back(self) -> None:
         """
         Returns to the main menu.
@@ -118,21 +118,20 @@ class RecentGamesFrame(tk.Frame):
     def __init__(self, master: HistoryWindow) -> None:
         super().__init__(master)
         self.listbox = tk.Listbox(
-            self, font=ink_free(12), width=55, height=5,
-            bg=GREEN, border=5)
+            self, font=ink_free(12), width=55, height=5, bg=GREEN, border=5)
         self.listbox.bind("<<ListboxSelect>>", lambda _: master.select_game())
         self.scrollbar = tk.Scrollbar(self, orient="vertical")
-        
-        for game in master.recent_games:
+
+        for recent_game in master.recent_games:
             display = "{} | {} -> {} | {}".format(
-                epoch_to_strftime(game["start_time"]),
-                str(tuple(game["numbers"])), game["target"],
-                "✔️" if game["is_win"] else "❌")
+                epoch_to_strftime(recent_game["start_time"]),
+                str(tuple(recent_game["numbers"])), recent_game["target"],
+                "✔️" if recent_game["is_win"] else "❌")
             self.listbox.insert(0, display)
-        
+
         self.listbox.config(yscrollcommand=self.scrollbar.set)
         self.scrollbar.config(command=self.listbox.yview)
-        
+
         self.listbox.pack(side="left")
         self.scrollbar.pack(side="right", fill="y")
 
@@ -147,14 +146,14 @@ class GameDataLabelFrame(tk.LabelFrame):
             master, font=ink_free(15, True),
             text="Recent Game", labelanchor="n")
         self.data = game_data
-        
+
         self.selected_numbers_frame = game.SelectedNumbersFrame(
             self, game_data["numbers"])
         self.target_number_label = game.TargetNumberLabel(
             self, game_data["target"])
         self.stats_frame = GameDataStatsFrame(self)
         self.navigation_frame = GameDataNavigationFrame(self)
-        
+
         self.selected_numbers_frame.grid(
             row=0, column=0, columnspan=2, padx=10, pady=5)
         self.target_number_label.grid(row=1, rowspan=2, column=0, padx=10)
@@ -208,8 +207,7 @@ class XpSourcesFrame(tk.Frame):
         super().__init__(master)
         self.listbox = tk.Listbox(
             self, font=ink_free(15), width=25, height=5)
-        for source in xp_sources:
-            self.listbox.insert("end", source)
+        self.listbox.insert("end", *xp_sources)
         self.scrollbar = tk.Scrollbar(self, orient="vertical")
 
         self.listbox.config(yscrollcommand=self.scrollbar.set)
@@ -233,6 +231,6 @@ class GameDataNavigationFrame(tk.Frame):
             self, font=ink_free(20), text="Solutions", width=15, border=5,
             bg=ORANGE, activebackground=GREEN,
             command=master.master.solutions)
-        
+
         self.close_button.pack(padx=10, side="left")
         self.solutions_button.pack(padx=10, side="right")
