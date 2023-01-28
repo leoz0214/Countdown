@@ -2,32 +2,22 @@
 The main menu which leads to different parts of the app.
 """
 import tkinter as tk
-import gc
 import webbrowser
 from pathlib import Path
 
 import game
-import stats
-import achievements
-import history
-import options
-import data
-import level
-from colours import *
-from utils import ink_free, bool_to_state, get_music
-from achievements import AchievementTierRequirements
+from mechanics import achievements
+from mechanics import history
+from mechanics import level
+from mechanics import options
+from mechanics import stats
+from utils.colours import *
+from utils.utils import ink_free, bool_to_state, get_music
 
 
-WIN_STREAK_CATEGORIES = AchievementTierRequirements(2, 5, 20, 78)
+WIN_STREAK_CATEGORIES = achievements.AchievementTierRequirements(2, 5, 20, 78)
 MENU_MUSIC = get_music("menu.mp3")
 TUTORIAL_FILE = f"{Path('').parent.absolute()}/TUTORIAL.html"
-
-
-def open_tutorial() -> None:
-    """
-    Opens the tutorial of the game in a web browser.
-    """
-    webbrowser.open(TUTORIAL_FILE)
 
 
 class MainMenu(tk.Frame):
@@ -37,7 +27,6 @@ class MainMenu(tk.Frame):
     """
 
     def __init__(self, root: tk.Tk) -> None:
-        gc.collect()
         super().__init__(root)
         self.root = root
         self.root.title("Countdown - Main Menu")
@@ -46,17 +35,17 @@ class MainMenu(tk.Frame):
             self, font=ink_free(100, True), text="Countdown")
         self.navigation_frame = MainMenuNavigationFrame(self)
 
-        options = data.get_options()
-        if options["music"]["on"]:
+        player_options = options.get_options()
+        if player_options["music"]["on"]:
             MENU_MUSIC.play(-1)
-        
-        if options["stats"]:
+
+        if player_options["stats"]:
             self.level_label_frame = level.LevelLabelFrame(
                 self, level.Level())
 
-            streak = data.get_win_streak()
+            streak = stats.get_win_streak()
             self.win_streak_label = CurrentWinStreakLabel(self, streak)
-            
+
             self.title_label.grid(
                 row=0, column=0, columnspan=2, padx=25, pady=15)
             self.level_label_frame.grid(row=1, column=0, pady=10, sticky="s")
@@ -66,46 +55,54 @@ class MainMenu(tk.Frame):
         else:
             self.title_label.pack(padx=25, pady=15)
             self.navigation_frame.pack(padx=10, pady=15)
-    
+
+    def exit(self) -> None:
+        """
+        Exits to another part of the application.
+        """
+        MENU_MUSIC.stop()
+        self.destroy()
+
     def play(self) -> None:
         """
         Starts the game.
         """
-        self.destroy()
-        MENU_MUSIC.stop()
+        self.exit()
         game.Game(self.root).pack()
-    
+
     def statistics(self) -> None:
         """
         Opens statistics.
         """
-        self.destroy()
-        MENU_MUSIC.stop()
+        self.exit()
         stats.StatisticsWindow(self.root).pack()
-    
+
     def history(self) -> None:
         """
         Opens history.
         """
-        self.destroy()
-        MENU_MUSIC.stop()
+        self.exit()
         history.HistoryWindow(self.root).pack()
-    
+
     def achievements(self) -> None:
         """
         Opens achievements.
         """
-        self.destroy()
-        MENU_MUSIC.stop()
+        self.exit()
         achievements.AchievementsWindow(self.root).pack()
 
     def options(self) -> None:
         """
         Opens options.
         """
-        self.destroy()
-        MENU_MUSIC.stop()
+        self.exit()
         options.OptionsWindow(self.root).pack()
+
+    def tutorial(self) -> None:
+        """
+        Opens the tutorial of the game in a web browser.
+        """
+        webbrowser.open(TUTORIAL_FILE)
 
 
 class CurrentWinStreakLabel(tk.Label):
@@ -120,22 +117,19 @@ class CurrentWinStreakLabel(tk.Label):
             BLACK if streak < WIN_STREAK_CATEGORIES.bronze else
             BRONZE if streak < WIN_STREAK_CATEGORIES.silver else
             SILVER if streak < WIN_STREAK_CATEGORIES.gold else
-            GOLD if streak < WIN_STREAK_CATEGORIES.platinum else
-            PLATINUM)
-        
+            GOLD if streak < WIN_STREAK_CATEGORIES.platinum else PLATINUM)
         super().__init__(
             master, font=ink_free(15, True), text=text, fg=colour, width=22)
 
 
 class MainMenuNavigationFrame(tk.Frame):
     """
-    A frame of buttons which allows the player to
-    navigate through the app.
+    Buttons which allow the player to navigate through the app.
     """
 
     def __init__(self, master: MainMenu) -> None:
         super().__init__(master)
-        stats_on = data.get_options()["stats"]
+        stats_on = options.get_option("stats")
 
         self.play_button = tk.Button(
             self, font=ink_free(25, True), text="Play", relief="ridge",
@@ -154,13 +148,11 @@ class MainMenuNavigationFrame(tk.Frame):
             bg=ORANGE, activebackground=GREEN, width=15, border=3,
             command=master.history, state=bool_to_state(stats_on))
         self.options_button = tk.Button(
-            self, font=ink_free(15), text="Options",
-            bg=ORANGE, activebackground=GREEN, width=15, border=3,
-            command=master.options)
+            self, font=ink_free(15), text="Options", activebackground=GREEN,
+            bg=ORANGE, width=15, border=3, command=master.options)
         self.tutorial_button = tk.Button(
-            self, font=ink_free(15), text="Tutorial",
-            bg=ORANGE, activebackground=GREEN, width=15, border=3,
-            command=open_tutorial)
+            self, font=ink_free(15), text="Tutorial", activebackground=GREEN,
+            bg=ORANGE, width=15, border=3, command=master.tutorial)
 
         self.play_button.pack(pady=5)
         self.stats_button.pack(pady=5)

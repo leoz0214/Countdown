@@ -1,27 +1,35 @@
 """
 Module of the main game itself.
 """
-import tkinter as tk
-from tkinter import messagebox
-import secrets
-import math
+import ctypes
 import itertools
+import json
+import math
+import secrets
 import time
+import tkinter as tk
 from timeit import default_timer as timer
+from tkinter import messagebox
 
-import menu
 import end
-import generate
-import data
-from utils import (
+import menu
+from utils.colours import *
+from utils.io import check_folder_exists, FOLDER
+from utils.utils import (
     draw_circle, evaluate, bool_to_state, get_sfx, get_music, ink_free,
-    seconds_to_hhmmss)
-from colours import *
-from achievements import format_special_achievement, get_achievement_count
+    seconds_to_hhmmss, load_cpp_library, machine_expression)
+from mechanics.achievements import (
+    format_special_achievement, get_achievement_count,
+    complete_special_achievement)
+from mechanics.options import get_option, get_options
 
 
 NUMBER_COUNT = 7
-MAX_SMALL_COUNT = MAX_BIG_COUNT = 5
+MAX_SMALL_COUNT = 5
+MAX_BIG_COUNT = 5
+
+POSSIBLE_SMALL_NUMBERS = list(range(2, 10))
+POSSIBLE_BIG_NUMBERS = [25, 50, 75, 100] * 2
 
 SELECT_SFX = get_sfx("select.wav")
 COUNT_SFX = get_sfx("count.wav")
@@ -40,6 +48,7 @@ DURATION_S = 30
 
 MAX_SOLUTION_LENGTH = 64
 
+# For keybinds whilst entering the solution.
 KEY_TO_ACTUAL = {
     "plus": "+",
     "minus": "-",
@@ -48,6 +57,60 @@ KEY_TO_ACTUAL = {
     "parenleft": "(",
     "parenright": ")"
 }
+
+RECENT_NUMBERS_FILE = f"{FOLDER}/recent_numbers.json"
+MAX_RECENT_NUMBERS_COUNT = 25
+
+
+_generate_number = load_cpp_library("generate.so").generate_number
+_generate_number.restype = ctypes.c_int
+
+
+def generate_number(numbers: list[int]) -> int:
+    """
+    Gets a random target number from 201 to 999.
+    """
+    recent = get_recent_numbers()
+    result = _generate_number(
+        (ctypes.c_int * NUMBER_COUNT)(*numbers),
+        (ctypes.c_int * len(recent))(*recent), len(recent))
+    add_recent_number(result)
+    return result
+
+
+@check_folder_exists()
+def get_recent_numbers() -> list[int]:
+    """
+    Gets the most recently randomly generated target numbers.
+    """
+    try:
+        with open(RECENT_NUMBERS_FILE, "r", encoding="utf8") as f:
+            recent = json.load(f)
+        if (
+            not isinstance(recent, list)
+            or len(recent) > MAX_RECENT_NUMBERS_COUNT
+            or not all(
+                isinstance(number, int) and 201 <= number <= 999
+                for number in recent)
+        ):
+            raise ValueError
+        return recent
+    except (FileNotFoundError, ValueError):
+        with open(RECENT_NUMBERS_FILE, "w", encoding="utf8") as f:
+            json.dump([], f)
+        return []
+
+
+@check_folder_exists()
+def add_recent_number(number: int) -> None:
+    """
+    Adds a randomly generated target number to the recent numbers.
+    """
+    recent = [number] + get_recent_numbers()
+    if len(recent) > MAX_RECENT_NUMBERS_COUNT:
+        recent.pop()
+    with open(RECENT_NUMBERS_FILE, "w", encoding="utf8") as f:
+        json.dump(recent, f)
 
 
 class Game(tk.Frame):
@@ -61,7 +124,7 @@ class Game(tk.Frame):
         self.root.title("Countdown - Game")
         self.starting_achievement_count = get_achievement_count()
 
-        options = data.get_options()
+        options = get_options()
         for sfx in (
             SELECT_SFX, COUNT_SFX, GO_SFX, INCORRECT_SOLUTION_SFX,
             CORRECT_SOLUTION_SFX
@@ -72,14 +135,14 @@ class Game(tk.Frame):
 
         self.frame = SelectNumbersFrame(self)
         self.frame.pack()
-    
+
     def home(self) -> None:
         """
         Return back to the main menu.
         """
         self.destroy()
         menu.MainMenu(self.root).pack()
-    
+
     def start(self) -> None:
         """
         Starts the game.
@@ -103,7 +166,7 @@ class Game(tk.Frame):
         self.frame.destroy()
         self.frame = EnterSolutionFrame(self, numbers, target)
         self.frame.pack()
-    
+
     def proceed_to_finish(
         self, solution: str | None, numbers: list[int], target: int) -> None:
         """
@@ -136,44 +199,44 @@ class SelectNumbersFrame(tk.Frame):
         self.big_numbers_frame = BigNumbersFrame(self)
         self.navigation_frame = SelectNumbersNavigationFrame(self)
 
-        auto_select = data.get_options()["auto_generate"]
+        auto_select = get_option("auto_generate")
         if auto_select["on"]:
             small_count = secrets.choice(range(auto_select["min_small"], 6))
-            self.auto_select(small_count, 7 - small_count)
-        
+            self.auto_select(small_count, NUMBER_COUNT - small_count)
+
         self.title_label.pack(padx=10, pady=10)
         self.selected_numbers_frame.pack(padx=10, pady=10)
         self.small_numbers_frame.pack(padx=10, pady=10)
         self.big_numbers_frame.pack(padx=10, pady=10)
         self.navigation_frame.pack(padx=10, pady=(50, 10))
-    
+
     def add_number(self, number: int) -> None:
         """
         Adds a number to the selection.
         """
         count = self.selected_numbers_frame.count
-        self.selected_numbers_frame.number_labels[count].config(
-            text=number)
+        self.selected_numbers_frame.number_labels[count].config(text=number)
         self.selected_numbers_frame.count += 1
-
         SELECT_SFX.play()
-
         if self.selected_numbers_frame.count == NUMBER_COUNT:
             # Ready to begin - all numbers selected.
             self.small_numbers_frame.destroy()
             self.big_numbers_frame.destroy()
             self.navigation_frame.start_button.config(state="normal")
-    
+
     def auto_select(self, small_remaining: int, big_remaining: int) -> None:
         """
         Automatically selects numbers (from options).
         """
         if not small_remaining and not big_remaining:
+            # No more numbers to select. Exit.
             return
         if not small_remaining:
+            # Only big numbers remain.
             self.big_numbers_frame.select()
             big_remaining -= 1
         elif not big_remaining:
+            # Only small numbers remain.
             self.small_numbers_frame.select()
             small_remaining -= 1
         else:
@@ -195,14 +258,15 @@ class SelectedNumbersFrame(tk.Frame):
     """
 
     def __init__(
-        self, master: tk.Frame, numbers: list[int] | None = None) -> None:
+        self, master: tk.Frame, numbers: list[int] | None = None
+    ) -> None:
         super().__init__(master)
         self.number_labels = [
             tk.Label(
                 self, font=ink_free(50), width=4, height=1, bg=LIGHT_BLUE,
                 highlightbackground=BLACK, highlightthickness=3)
             for _ in range(NUMBER_COUNT)]
-        
+
         if numbers is not None:
             self.count = NUMBER_COUNT
             for label, number in zip(self.number_labels, numbers):
@@ -224,30 +288,30 @@ class SmallNumbersFrame(tk.Frame):
         self.pack_propagate(False)
         self.master = master
 
-        possible = list(range(2, 10))
+        possible = POSSIBLE_SMALL_NUMBERS.copy()
         self.numbers = []
 
         for _ in range(MAX_SMALL_COUNT):
             selected = secrets.choice(possible)
             self.numbers.append(selected)
             possible.remove(selected)
-        
+
         self.info_label = tk.Label(
             self, font=ink_free(25, True), text="Small numbers (2-9):",
             width=25, justify="left")
-        
-        auto_select = data.get_options()["auto_generate"]["on"]
+
+        auto_select = get_option("auto_generate", "on")
         self.buttons = [
             tk.Button(
                 self, bg=ORANGE, activebackground=GREEN,
                 width=10, height=5, border=5, command=self.select,
                 state=bool_to_state(not auto_select))
             for _ in range(MAX_SMALL_COUNT)]
-        
+
         self.info_label.pack(side="left")
         for button in self.buttons:
             button.pack(padx=10, side="left")
-    
+
     def select(self) -> None:
         """
         Selects a small number.
@@ -266,7 +330,7 @@ class BigNumbersFrame(tk.Frame):
         self.pack_propagate(False)
         self.master = master
 
-        possible = [25, 50, 75, 100] * 2
+        possible = POSSIBLE_BIG_NUMBERS.copy()
         self.numbers = []
         for _ in range(MAX_BIG_COUNT):
             selected = secrets.choice(possible)
@@ -276,19 +340,19 @@ class BigNumbersFrame(tk.Frame):
         self.info_label = tk.Label(
             self, font=ink_free(25, True), width=25,
             text="Big numbers (25, 50, 75, 100):", justify="left")
-        
-        auto_select = data.get_options()["auto_generate"]["on"]
+
+        auto_select = get_option("auto_generate", "on")
         self.buttons = [
             tk.Button(
                 self, bg=ORANGE, activebackground=GREEN,
                 width=10, height=5, border=5, command=self.select,
                 state=bool_to_state(not auto_select))
-            for _ in range(MAX_SMALL_COUNT)]
-        
+            for _ in range(MAX_BIG_COUNT)]
+
         self.info_label.pack(side="left")
         for button in self.buttons:
             button.pack(padx=10, side="left")
-    
+
     def select(self) -> None:
         """
         Selects a big number.
@@ -304,16 +368,15 @@ class SelectNumbersNavigationFrame(tk.Frame):
 
     def __init__(self, master: SelectNumbersFrame) -> None:
         super().__init__(master)
-
         self.back_button = tk.Button(
             self, font=ink_free(25), text="Back",
-            bg=ORANGE, activebackground=RED, width=10, border=3,
+            bg=ORANGE, activebackground=RED, width=10, border=5,
             command=master.master.home)
         self.start_button = tk.Button(
             self, font=ink_free(25), text="Start!",
-            bg=ORANGE, activebackground=GREEN, width=10, border=3,
+            bg=ORANGE, activebackground=GREEN, width=10, border=5,
             command=master.master.start, state="disabled")
-        
+
         self.back_button.pack(padx=10, side="left")
         self.start_button.pack(padx=10, side="right")
 
@@ -321,8 +384,8 @@ class SelectNumbersNavigationFrame(tk.Frame):
 class CountdownFrame(tk.Frame):
     """
     Once the player starts, this frame is used to display
-    the number the player must try and get, and once time is up,
-    the player is automatically redirected to enter their solution(s).
+    the target number, and once time is up,
+    the player is automatically redirected to enter their solution.
     """
 
     def __init__(self, master: Game, numbers: list[int]) -> None:
@@ -340,11 +403,10 @@ class CountdownFrame(tk.Frame):
         if first:
             self.pre_countdown_label = tk.Label(
                 self, font=ink_free(200), width=3)
-            self.pre_countdown_label.pack(padx=100, pady=100)         
+            self.pre_countdown_label.pack(padx=100, pady=100)
         elif seconds == 0:
             COUNT_SFX.stop()
             GO_SFX.play()
-
             self.pre_countdown_label.config(text="GO!")
             # Starts from here.
             self.after(1000, self.start)
@@ -355,14 +417,14 @@ class CountdownFrame(tk.Frame):
 
         self.pre_countdown_label.config(text=seconds)
         self.after(1000, lambda: self.pre_countdown(seconds - 1))
-    
+
     def start(self) -> None:
         """
         Begins the countdown round.
         """
         self.pre_countdown_label.destroy()
         GO_SFX.stop()
-        self.target = generate.generate_number(self.numbers)
+        self.target = generate_number(self.numbers)
 
         self.target_number_label = TargetNumberLabel(self, self.target, True)
         self.selected_numbers_frame = SelectedNumbersFrame(self, self.numbers)
@@ -371,19 +433,20 @@ class CountdownFrame(tk.Frame):
         self.target_number_label.pack(padx=25, pady=15)
         self.selected_numbers_frame.pack(padx=10, pady=15)
         self.countdown_clock.pack(padx=10, pady=15)
-    
+
     def count_down(self, first: bool = False) -> None:
         """
-        Starts the 30 second timer.
+        Starts the 30 second timer and continues to pass the time.
+        Once time is up, the player is directed to enter a solution.
         """
         if first:
             self.start_time = timer()
             self.master.music.play()
-        elif timer() - self.start_time >= DURATION_S:
-            return self.master.end()
         else:
-            self.countdown_clock.destroy()
             time_passed = timer() - self.start_time
+            if time_passed >= DURATION_S:
+                return self.master.end()
+            self.countdown_clock.destroy()
             # Refresh the clock.
             self.countdown_clock = CountdownClock(self, time_passed)
             self.countdown_clock.pack(padx=10, pady=15)
@@ -396,8 +459,8 @@ class TargetNumberLabel(tk.Label):
     """
 
     def __init__(
-        self, master: tk.Frame, number: int, shuffle: bool = False) -> None:
-
+        self, master: tk.Frame, number: int, shuffle: bool = False
+    ) -> None:
         super().__init__(
             master, font=ink_free(100, True), width=4, bg=GREEN,
             highlightbackground=BLACK, highlightthickness=5)
@@ -407,7 +470,7 @@ class TargetNumberLabel(tk.Label):
             self.shuffle_number_display(SHUFFLES_BEFORE_REAL_NUMBER)
         else:
             self.config(text=number)
-    
+
     def shuffle_number_display(self, count: int) -> None:
         """
         Displays random numbers which change rapidly.
@@ -431,40 +494,57 @@ class CountdownClock(tk.Canvas):
     """
 
     def __init__(
-        self, master: CountdownFrame, seconds_passed: float = 0) -> None:
+        self, master: CountdownFrame, seconds_passed: float = 0
+    ) -> None:
         super().__init__(master, width=250, height=250)
-        radius = 123
-        centx = 125
-        centy = 125
-        draw_circle(self, centx, centy, radius, SILVER)
-
+        self.radius = 123
+        self.centx = 125
+        self.centy = 125
         # 1 degree = 1/6 of a second (30 seconds total, 180 degrees).
-        angle = int(seconds_passed * 6)
+        self.angle = int(seconds_passed * 6)
 
-        start = 90 - angle if angle <= 90 else 360 - (angle - 90)
+        draw_circle(self, self.centx, self.centy, self.radius, SILVER)
+        self.create_progress_arc()
+        self.create_clock_parts()
+        self.create_indicators()
+        self.create_countdown_pointer()
+    
+    def create_progress_arc(self) -> None:
+        """
+        Creates an arc displaying the time passed with an
+        appropriate colour selected.
+        """
+        start = (
+            90 - self.angle if self.angle <= 90 else 360 - (self.angle - 90))
         # Green means plenty of time left,  red means time's nearly up!
         arc_fill = CLOCK_COLOURS[
-            max(0, int(angle / 180 * len(CLOCK_COLOURS)) - 1)]
+            max(0, int(self.angle / 180 * len(CLOCK_COLOURS)) - 1)]
         self.create_arc(
-            3, 3, 247, 247, start=start, extent=angle,
+            3, 3, 247, 247, start=start, extent=self.angle,
             fill=arc_fill, outline="")
-
-        draw_circle(self, centx, centy, 60, SILVER, "")
-        self.create_line(centx, 0, centx, 250, fill=BLACK, width=2)
-        self.create_line(0, centy, 250, centy, fill=BLACK)
-        draw_circle(self, centx, centy, 15, GREY, "")
-
-        # Create indicators (5, 10, 20, 25, 35, 40, 50, 55).
-
+    
+    def create_clock_parts(self) -> None:
+        """
+        Create the main parts of the clock which never change in any way.
+        """
+        draw_circle(self, self.centx, self.centy, 60, SILVER, "")
+        self.create_line(self.centx, 0, self.centx, 250, fill=BLACK, width=2)
+        self.create_line(0, self.centy, 250, self.centy, fill=BLACK)
+        draw_circle(self, self.centx, self.centy, 15, GREY, "")
+    
+    def create_indicators(self) -> None:
+        """
+        Create indicators (5, 10, 20, 25, 35, 40, 50, 55).
+        """
         # For 5, 25, 35 and 55.
-        steep_gradient_max_x = radius * math.cos(math.radians(60))
+        steep_gradient_max_x = self.radius * math.cos(math.radians(60))
         steep_gradient_max_y = (
-            radius ** 2 - steep_gradient_max_x ** 2) ** 0.5
+            self.radius ** 2 - steep_gradient_max_x ** 2) ** 0.5
 
         # For 10, 20, 40, 50
-        gentle_gradient_max_x = radius * math.cos(math.radians(30))
+        gentle_gradient_max_x = self.radius * math.cos(math.radians(30))
         gentle_gradient_max_y = (
-            radius ** 2 - gentle_gradient_max_x ** 2) ** 0.5
+            self.radius ** 2 - gentle_gradient_max_x ** 2) ** 0.5
 
         for max_x, max_y in (
             (steep_gradient_max_x, steep_gradient_max_y),
@@ -472,75 +552,81 @@ class CountdownClock(tk.Canvas):
         ):
             for x_op, y_op in itertools.product("+-", repeat=2):
                 if x_op == "+":
-                    x1 = centx + 100/radius * max_x,
-                    x2 = centx + 120/radius * max_x
+                    x1 = self.centx + 100/self.radius * max_x
+                    x2 = self.centx + 120/self.radius * max_x
                 else:
-                    x1 = centx - 100/radius * max_x
-                    x2 = centx - 120/radius * max_x
+                    x1 = self.centx - 100/self.radius * max_x
+                    x2 = self.centx - 120/self.radius * max_x
                 if y_op == "+":
-                    y1 = centy + 100/radius * max_y
-                    y2 = centy + 120/radius * max_y
+                    y1 = self.centy + 100/self.radius * max_y
+                    y2 = self.centy + 120/self.radius * max_y
                 else:
-                    y1 = centy - 100/radius * max_y
-                    y2 = centy - 120/radius * max_y
+                    y1 = self.centy - 100/self.radius * max_y
+                    y2 = self.centy - 120/self.radius * max_y
 
                 # White if passed.
                 if (
                     max_x == steep_gradient_max_x and x_op == "+" and
                     (
-                        (y_op == "-" and angle > 30) or
-                        (y_op == "+" and angle > 150))
+                        (y_op == "-" and self.angle > 30) or
+                        (y_op == "+" and self.angle > 150))
                 ) or (
                     max_x == gentle_gradient_max_x and x_op == "+" and
                     (
-                        (y_op == "-" and angle > 60) or
-                        (y_op == "+" and angle > 120))
+                        (y_op == "-" and self.angle > 60) or
+                        (y_op == "+" and self.angle > 120))
                 ):
                     self.create_line(x1, y1, x2, y2, fill=WHITE)
                 else:
                     self.create_line(x1, y1, x2, y2, fill=BLACK)
-        
-        # Creates the countdown pointer.
-        if angle == 0:
+    
+    def create_countdown_pointer(self) -> None:
+        """
+        Creates the countdown pointer.
+        """
+        if self.angle == 0:
             self.create_polygon(
-                centx - 10, centy, centx + 10, centy, centx, 0, fill=GREY)
-        elif angle == 90:
+                self.centx - 10, self.centy,
+                self.centx + 10, self.centy, self.centx, 0, fill=GREY)
+        elif self.angle == 90:
             self.create_polygon(
-                centx, centy - 10, centx, centy + 10, centx + radius, centy,
-                fill=GREY)
-        elif angle == 180:
+                self.centx, self.centy - 10, self.centx, self.centy + 10,
+                self.centx + self.radius, self.centy, fill=GREY)
+        elif self.angle == 180:
             self.create_polygon(
-                centx - 10, centy, centx + 10, centy, centx, centy + radius,
-                fill=GREY)
+                self.centx - 10, self.centy, self.centx + 10, self.centy,
+                self.centx, self.centy + self.radius, fill=GREY)
         else:
-            if angle < 90:
-                x_shift = 10 * math.cos(math.radians(angle))
+            if self.angle < 90:
+                x_shift = 10 * math.cos(math.radians(self.angle))
                 y_shift = (10 ** 2 - x_shift ** 2) ** 0.5
 
-                x_right = radius * math.cos(math.radians(90 - angle))
-                y_up = (radius ** 2 - x_right ** 2) ** 0.5
+                x_right = self.radius * math.cos(
+                    math.radians(90 - self.angle))
+                y_up = (self.radius ** 2 - x_right ** 2) ** 0.5
 
                 self.create_polygon(
-                    centx - x_shift, centy - y_shift,
-                    centx + x_shift, centy + y_shift,
-                    centx + x_right, centy - y_up, fill=GREY)
+                    self.centx - x_shift, self.centy - y_shift,
+                    self.centx + x_shift, self.centy + y_shift,
+                    self.centx + x_right, self.centy - y_up, fill=GREY)
             else:
-                x_shift = 10 * math.sin(math.radians(angle - 90))
+                x_shift = 10 * math.sin(math.radians(self.angle - 90))
                 y_shift = (100 - x_shift ** 2) ** 0.5
 
-                x_right = radius * math.cos(math.radians(angle - 90))
-                y_down = (radius ** 2 - x_right ** 2) ** 0.5
+                x_right = self.radius * math.cos(
+                    math.radians(self.angle - 90))
+                y_down = (self.radius ** 2 - x_right ** 2) ** 0.5
 
                 self.create_polygon(
-                    centx + x_shift, centy - y_shift,
-                    centx - x_shift, centy + y_shift,
-                    centx + x_right, centy + y_down, fill=GREY)
+                    self.centx + x_shift, self.centy - y_shift,
+                    self.centx - x_shift, self.centy + y_shift,
+                    self.centx + x_right, self.centy + y_down, fill=GREY)
 
 
 class EnterSolutionFrame(tk.Frame):
     """
     Where the player enters a solution with their selected numbers
-    for their given number.
+    for the target.
     """
 
     def __init__(self, master: Game, numbers: list[int], target: int) -> None:
@@ -548,7 +634,7 @@ class EnterSolutionFrame(tk.Frame):
         self.master = master
         self.numbers = numbers
         self.target = target
-        option = data.get_options()["solution_time_limit"]
+        option = get_option("solution_time_limit")
         self.start = timer()
         self.max_seconds = (
             option["minutes"] * 60 if option["on"] else float("inf"))
@@ -576,13 +662,12 @@ class EnterSolutionFrame(tk.Frame):
         self.option_buttons.pack(padx=10, pady=(50, 10))
 
         self.master.root.bind("<Key>", self.enter_key)
-    
+
     def add(self, to_add: str, from_pop: bool = False) -> None:
         """
         Adds a number, operator or parenthesis to the solution.
         """
         current_solution = self.solution_label.get()
-
         # Automatically add 'x' sign to indicate multiplication
         # if a number or ) is followed by (
         if (
@@ -594,7 +679,7 @@ class EnterSolutionFrame(tk.Frame):
             if len(current_solution) >= MAX_SOLUTION_LENGTH - 1:
                 # Cannot insert two more characters 'x('
                 return
-            new_solution = current_solution + "x" + to_add
+            new_solution = f"{current_solution}x{to_add}"
         else:
             if len(current_solution) > MAX_SOLUTION_LENGTH - len(to_add):
                 # Cannot insert n more characters.
@@ -618,7 +703,7 @@ class EnterSolutionFrame(tk.Frame):
 
         if to_add.isdigit() and not from_pop:
             self.used_numbers.append(to_add)
-      
+
         affected_buttons = []
         for number in self.used_numbers:
             for button in self.solution_buttons:
@@ -635,24 +720,24 @@ class EnterSolutionFrame(tk.Frame):
                         button.config(
                             state="disabled", disabledforeground=GREY)
                     break
-        
+
         # Disable all except closing parenthesis or remove last input.
         if len(self.used_numbers) == NUMBER_COUNT:
             for button in self.solution_buttons:
                 button.config(
                     state=bool_to_state(button.cget("text") in ")←"))
-        
+
         if to_add == "(" and not from_pop:
             self.opening_parentheses += 1
         elif to_add == ")" and not from_pop:
             self.closing_parentheses += 1
-        
+
         if self.closing_parentheses >= self.opening_parentheses:
             # Cannot add closing parentheses with no corresponding
             # opening parentheses.
             closing_parentheses_button = self.solution_buttons.buttons[1][-2]
             closing_parentheses_button.config(state="disabled")
-        
+
         back_button = self.solution_buttons.buttons[1][-1]
         back_button.config(state="normal")
 
@@ -661,7 +746,7 @@ class EnterSolutionFrame(tk.Frame):
             state=bool_to_state(
                 self.opening_parentheses == self.closing_parentheses
                 and (to_add.isdigit() or to_add == ")")))
-    
+
     def pop(self) -> None:
         """
         Removes the previous input from the solution.
@@ -695,13 +780,11 @@ class EnterSolutionFrame(tk.Frame):
             self.closing_parentheses -= 1
 
         new_solution = current_solution[:index]
-
         if not new_solution:
             self.reset()
             return
 
-        # Re-adds input before the removed input.
-        # This prevents code duplication.
+        # Re-adds input before the removed input. Not much new code needed.
         index = -1
         while new_solution[index].isdigit():
             if abs(index) >= len(new_solution):
@@ -709,10 +792,10 @@ class EnterSolutionFrame(tk.Frame):
             index -= 1
         else:
             index = min(index + 1, -1)
-        
+
         self.solution_label.config(text=new_solution[:index])
         self.add(new_solution[index:], True)
-    
+
     def reset(self) -> None:
         """
         Resets solution input.
@@ -730,15 +813,14 @@ class EnterSolutionFrame(tk.Frame):
 
         self.option_buttons.reset_button.config(state="disabled")
         self.option_buttons.submit_button.config(state="disabled")
-    
+
     def enter_key(self, event: tk.Event) -> None:
         """
-        Takes a key which represents an operator or parenthesis,
-        and if the corresponding button is enabled, the code which
-        the corresponding runs will run by the keybind.
+        Takes a key which represents an operator, single-digit number
+        or parenthesis, and if the corresponding button is enabled,
+        the key is added.
         """
         key = event.keysym.lower()
-
         if key in ("backspace", "left"):
             self.pop()
             return
@@ -751,7 +833,7 @@ class EnterSolutionFrame(tk.Frame):
                 if button.cget("state") == "normal":
                     self.add(key)
                 return
-    
+
     def submit(self) -> None:
         """
         Gets a solution from the player and validates it.
@@ -759,7 +841,7 @@ class EnterSolutionFrame(tk.Frame):
         the solution is incorrect/invalid.
         """
         solution = self.solution_label.get()
-        to_evaluate = solution.replace("x", "*").replace("÷", "/")
+        to_evaluate = machine_expression(solution)
         INCORRECT_SOLUTION_SFX.stop()
 
         if evaluate(to_evaluate) == self.target:
@@ -767,14 +849,14 @@ class EnterSolutionFrame(tk.Frame):
             self.master.proceed_to_finish(solution, self.numbers, self.target)
         else:
             if (
-                data.get_options()["stats"] and
-                data.complete_special_achievement("incorrect_solution")
+                get_option("stats") and
+                complete_special_achievement("incorrect_solution")
             ):
                 messagebox.showinfo(
                     "Achievement!",
                     format_special_achievement("incorrect_solution"))
             INCORRECT_SOLUTION_SFX.play()
-        
+
     def skip(self) -> None:
         """
         If the player has no solution, they can skip solution entry.
@@ -806,7 +888,7 @@ class SolutionLabel(tk.Label):
             master, font=ink_free(20),
             width=MAX_SOLUTION_LENGTH + 1, height=2, bg=GREEN,
             highlightbackground=BLACK, highlightthickness=5)
-    
+
     def get(self) -> str:
         """
         Returns current solution entry.
@@ -822,14 +904,13 @@ class SolutionButtonsFrame(tk.Frame):
     def __init__(self, master: EnterSolutionFrame) -> None:
         super().__init__(master)
         self.master = master
-
         self.buttons = [] # In rows.
-        
+
         self.buttons.append([
             SolutionInputButton(self, str(number))
             for number in master.numbers])
-        
-        row_2 = [SolutionInputButton(self, operator) for operator in "+-x÷()"]
+
+        row_2 = [SolutionInputButton(self, char) for char in "+-x÷()"]
         back_button = tk.Button(
             self, font=ink_free(25), text="←", width=4, border=3, bg=GREY,
             activebackground=RED, disabledforeground=RED, command=master.pop)
@@ -844,7 +925,7 @@ class SolutionButtonsFrame(tk.Frame):
         for i, row in enumerate(self.buttons):
             for j, button in enumerate(row):
                 button.grid(row=i, column=j, padx=5, pady=5)
-    
+
     def __iter__(self) -> None:
         """
         Allows iteration over all buttons in all rows.
@@ -881,16 +962,14 @@ class EnterSolutionOptionsFrame(tk.Frame):
             self, font=ink_free(25), text="Reset", width=10, border=5,
             bg=ORANGE, activebackground=RED, state="disabled",
             command=master.reset)
-        
         self.submit_button = tk.Button(
             self, font=ink_free(25), text="Submit", width=10, border=10,
             bg=ORANGE, activebackground=GREEN, state="disabled",
             command=master.submit)
-
         self.skip_button = tk.Button(
             self, font=ink_free(25), text="No solution", width=10, border=5,
             bg=ORANGE, activebackground=RED, command=master.skip)
-        
+
         self.reset_button.pack(padx=10, side="left")
         self.submit_button.pack(padx=10, side="left")
         self.skip_button.pack(padx=10)

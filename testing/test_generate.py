@@ -1,13 +1,12 @@
 import unittest
-import shutil
 import sys
 import secrets
-from contextlib import suppress
 
 sys.path.extend((".", "./src"))
 
-from src import generate
-from src import data
+from src.mechanics import solutions
+from src import game
+from src.utils.io import reset_data
 
 
 def generate_numbers():
@@ -32,48 +31,44 @@ def generate_numbers():
 class TestGenerate(unittest.TestCase):
 
     def test_generate_number(self):
-        with suppress(FileNotFoundError):
-            shutil.rmtree(data.FOLDER)
-
+        reset_data()
         numbers = generate_numbers()
-
         for _ in range(30):
-            number = generate.generate_number(numbers)
+            number = game.generate_number(numbers)
             self.assertTrue(201 <= number <= 999 and isinstance(number, int))
-
-        shutil.rmtree(data.FOLDER)
+        reset_data()
     
     def test_generate_solutions(self):
         numbers = generate_numbers()
-        target = generate.generate_number(numbers)
+        target = game.generate_number(numbers)
 
-        settings = generate.SolutionGenerationSettings(
+        settings = solutions.SolutionGenerationSettings(
             4, 4, 1, True, "+-*/", float("inf"))
-        result = generate.generate_solutions(numbers, target, settings)
+        result = solutions.generate_solutions(numbers, target, settings)
         self.assertEqual(len(result), 1)
         for r in result:
             self.assertEqual(round(
                 eval(r.replace("x", "*").replace("÷", "/")), 10), target)
 
-        settings = generate.SolutionGenerationSettings(
+        settings = solutions.SolutionGenerationSettings(
             4, 4, 1, False, "+-*", float("inf"))
-        result = generate.generate_solutions(numbers, target, settings)
+        result = solutions.generate_solutions(numbers, target, settings)
         self.assertEqual(len(result), 1)
         for r in result:
             self.assertEqual(round(
                 eval(r.replace("x", "*").replace("÷", "/")), 10), target)
     
-        settings = generate.SolutionGenerationSettings(
+        settings = solutions.SolutionGenerationSettings(
             4, 7, 25, False, "+-*/", float("inf"))
-        result = generate.generate_solutions(numbers, target, settings)
+        result = solutions.generate_solutions(numbers, target, settings)
         self.assertEqual(len(result), 25)
         for r in result:
             self.assertEqual(round(
                 eval(r.replace("x", "*").replace("÷", "/")), 10), target)
 
-        settings = generate.SolutionGenerationSettings(
+        settings = solutions.SolutionGenerationSettings(
             4, 7, 0, True, "+-*/", 3)
-        result = generate.generate_solutions(numbers, target, settings)
+        result = solutions.generate_solutions(numbers, target, settings)
         self.assertEqual(len(result), 0)
 
 

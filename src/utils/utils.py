@@ -1,20 +1,25 @@
 """
 Utility functions for the rest of the application.
 """
-import tkinter as tk
-import os
 import datetime
-from ctypes import cdll, c_double
+import tkinter as tk
+from ctypes import cdll, c_double, CDLL
 
 from pygame import mixer
 
 
-fast_eval = cdll.LoadLibrary(
-    f"{os.path.dirname(os.path.abspath(__file__))}/generate.so").eval
+def load_cpp_library(filename: str) -> CDLL:
+    """
+    Loads a C++ library in the bin folder with a particular filename.
+    Path not required, just the name of the file.
+    """
+    return cdll.LoadLibrary(f"./bin/{filename}")
+
+
+fast_eval = load_cpp_library("generate.so").eval
 fast_eval.restype = c_double
 
 mixer.init()
-
 
 AUDIO_FOLDER = "./audio"
 MUSIC_FOLDER = f"{AUDIO_FOLDER}/music"
@@ -37,8 +42,10 @@ def evaluate(expression: str) -> int | float:
     """
     Evaluates a simple maths expression with only +/-/*/'/'/().
     Order of operations followed.
-    
-    Calls fast corresponding function written in C++
+    Not for general purpose - meets the program requirements,
+    and that's it. Safer and faster than the built-in eval.
+
+    Calls fast corresponding function written in C++.
     """
     result = fast_eval(expression.encode(), 0, -1)
     if "/" in expression:
@@ -67,29 +74,49 @@ def days_to_seconds(days: int) -> int:
 
 def seconds_to_hhmmss(seconds: int | float) -> str:
     """
-    Converts seconds to HH:MM:SS format
+    Converts seconds to HH:MM:SS format.
     """
     seconds = int(seconds)
 
-    hours = seconds // 3600
-    minutes = (seconds % 3600) // 60
-    seconds = seconds % 60
+    hours = str(seconds // 3600).zfill(2)
+    minutes = str((seconds % 3600) // 60).zfill(2)
+    seconds = str(seconds % 60).zfill(2)
 
-    return "{}:{}:{}".format(
-        *(str(t).zfill(2) for t in (hours, minutes, seconds)))
+    return f"{hours}:{minutes}:{seconds}"
+
+
+def human_expression(expression: str) -> str:
+    """
+    Converts an expression formatted for the program to
+    process into the common equivalent people use in everyday life.
+    Multiplication: * -> x
+    Division: / -> ÷
+    """
+    return expression.replace("*", "x").replace("/", "÷")
+
+
+def machine_expression(expression: str) -> str:
+    """
+    Converts an expression formatted for people to read into
+    the equivalent which the program can use more effectively.
+    Multiplication: x -> *
+    Division: ÷ -> /
+    """
+    return expression.replace("x", "*").replace("÷", "/")
 
 
 def bool_to_state(expression: bool) -> str:
     """
-    Returns 'normal' if expression evaluates to True,
-    else 'disabled'.
+    Returns 'normal' if expression evaluates to True, else 'disabled'.
+    Useful to control the state of a Tkinter widget based on the
+    value of a Boolean.
     """
     return "normal" if expression else "disabled"
 
 
 def epoch_to_strftime(epoch: float) -> str:
     """
-    Converts seconds since epoch to the corresponding
+    Converts seconds since epoch into the corresponding
     human readable time (system time zone).
 
     The ISO 8601 format YYYY-MM-DD is used for date,
@@ -101,8 +128,7 @@ def epoch_to_strftime(epoch: float) -> str:
 
 def get_sfx(filename: str) -> mixer.Sound:
     """
-    Fetches the SFX with a particular filename,
-    returning a pygame Sound object.
+    Gets the SFX with a particular filename, returning a Sound object.
     Path not required, just the name of the file.
     """
     return mixer.Sound(f"{SFX_FOLDER}/{filename}")
@@ -110,8 +136,7 @@ def get_sfx(filename: str) -> mixer.Sound:
 
 def get_music(filename: str) -> mixer.Sound:
     """
-    Fetches the music with a particular filename,
-    returning a pygame Sound object.
+    Gets the music with a particular filename, returning a Sound object.
     Path not required, just the name of the file.
     """
     return mixer.Sound(f"{MUSIC_FOLDER}/{filename}")

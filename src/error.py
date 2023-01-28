@@ -1,18 +1,39 @@
 """
 Handles unhandled exceptions in the code.
 """
-import tkinter as tk
 import secrets
 import sys
+import tkinter as tk
 import traceback
+from contextlib import suppress
 
+import game
 import main
-import data
-from colours import *
-from utils import ink_free, get_sfx
+import menu
+from mechanics import options
+from utils.colours import *
+from utils.utils import ink_free, get_sfx
 
 
 ERROR_SFX = [get_sfx(f"error{n}.wav") for n in range(1, 3)]
+
+
+def stop_music(root: tk.Tk) -> None:
+    """
+    Stops any music playing.
+    """
+    with suppress(Exception):
+        frame = tuple(root.children.values())[0]
+        if isinstance(frame, menu.MainMenu):
+            menu.MENU_MUSIC.stop()
+        elif isinstance(frame, game.CountdownFrame):
+            frame.master.music.stop()
+        elif isinstance(frame, options.OptionsWindow):
+            music = (
+                frame.pages_frame.music_frame
+                .countdown_music_frame.current_music)
+            if music is not None:
+                music.stop()
 
 
 def tkinter_error(
@@ -22,7 +43,8 @@ def tkinter_error(
     """
     traceback.print_tb(tback)
     print(f"{exception.__name__}: {description}")
-    root.protocol("WM_DELETE_WINDOW", lambda: "")
+    stop_music(root)
+    root.protocol("WM_DELETE_WINDOW", lambda: None)
     root.destroy()
     unhandled_error()
 
@@ -37,14 +59,13 @@ def retry(old_root: tk.Tk) -> None:
 
 def existing_instance() -> None:
     """
-    The window displayed if an instance of the application
-    already exists.
+    The window displayed if an instance of the application already exists.
     """
     root = tk.Tk()
     root.title("Countdown - Application Instance Error")
-    root.iconbitmap("./images/icon.ico")
+    root.iconbitmap(main.ICON_IMAGE_FILE)
     root.tk_setPalette(background=DEFAULT_BACKGROUND, foreground=BLACK)
-    if data.get_options()["sfx"]:
+    if options.get_option("sfx"):
         secrets.choice(ERROR_SFX).play()
 
     title_label = tk.Label(
@@ -74,9 +95,9 @@ def unhandled_error() -> None:
     """
     root = tk.Tk()
     root.title("Countdown - Application Error")
-    root.iconbitmap("./images/icon.ico")
+    root.iconbitmap(main.ICON_IMAGE_FILE)
     root.tk_setPalette(background=DEFAULT_BACKGROUND, foreground=BLACK)
-    if data.get_options()["sfx"]:
+    if options.get_option("sfx"):
         secrets.choice(ERROR_SFX).play()
 
     title_label = tk.Label(

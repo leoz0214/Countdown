@@ -14,7 +14,8 @@ LIGHT_BLUE = "#03cffc"
 BLACK = "#000000"
 WHITE = "#ffffff"
 
-DEFAULT_BACKGROUND = "#0084ff"
+DEFAULT_BACKGROUND = "#0099ff"
 
-CLOCK_COLOURS = [f"#{hex(red)[2:].zfill(2)}ff00" for red in range(256)] + \
-    [f"#ff{hex(green)[2:].zfill(2)}00" for green in range(254, -1, -1)]
+CLOCK_COLOURS = (
+    [f"#{hex(red)[2:].zfill(2)}ff00" for red in range(256)] +
+    [f"#ff{hex(green)[2:].zfill(2)}00" for green in range(254, -1, -1)])
