@@ -36,7 +36,7 @@ simply run the main module in the source code with all the required files alongs
 Please ensure you have the 3rd party libraries 'tendo' and 'pygame' installed,
 and preferably 'ujson' for faster JSON parsing (optional). The main benefit of just running
 the code directly from Python is that the game starts up faster.
-If any of this is too complicated or infeasable, just use method 1.
+If any of this is too complicated or infeasible, just use method 1.
 
 For either method, please place the game folder in an
 appropriate location on your computer of your choice. No matter where the game itself

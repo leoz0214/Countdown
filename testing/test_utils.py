@@ -4,7 +4,7 @@ import math
 
 sys.path.extend((".", "./src"))
 
-from src import utils
+from src.utils import utils
 
 
 class TestUtils(unittest.TestCase):

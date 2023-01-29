@@ -4,6 +4,6 @@ import sys
 
 
 if __name__ == "__main__":
-    sys.path.extend((".", "./src"))
-    for file in glob.glob("src/*.py"):
+    sys.path.extend((".", "./src")) # Prevents import errors.
+    for file in glob.glob("src/*/*.py") + glob.glob("src/*.py"):
         result = Run([file], do_exit=False)
