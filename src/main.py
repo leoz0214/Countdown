@@ -6,8 +6,6 @@ import sys
 import tkinter as tk
 from tkinter import messagebox
 
-from tendo import singleton
-
 import end
 import error
 import game
@@ -16,6 +14,7 @@ from mechanics.options import get_option
 from mechanics.stats import reset_win_streak
 from utils.colours import *
 from utils.io import remove_temp_folder
+from utils.utils import is_already_running, set_as_running
 
 
 ICON_IMAGE_FILE = "./images/icon.ico"
@@ -25,17 +24,18 @@ def main() -> None:
     """
     Main function of the program.
     """
-    # In case the program terminated unexpectedly.
-    remove_temp_folder()
+    tk.Tk.report_callback_exception = error.tkinter_error
     # Only allows one instance of the main program to be run at any time.
     # Prevents the risks of race conditions, especially during IO.
-    try:
-        global instance_check # Required for check to work in function.
-        instance_check = singleton.SingleInstance()
-    except singleton.SingleInstanceException:
+    if is_already_running():
         error.existing_instance()
-    else:
-        launch()
+        return
+    # In case the program terminated by force.
+    remove_temp_folder()
+    # Indicate the program is running to stop a second instance spawning.
+    set_as_running()
+    # Starts the program.
+    launch()
 
 
 def launch() -> None:
@@ -74,9 +74,8 @@ def close_window(root: tk.Tk) -> None:
         frame.exit()
 
     remove_temp_folder()
-    sys.exit()
+    sys.exit(0)
 
 
 if __name__ == "__main__":
-    tk.Tk.report_callback_exception = error.tkinter_error
     main()

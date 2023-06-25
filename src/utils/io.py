@@ -2,13 +2,16 @@
 Utilities for file handling in the application.
 """
 import os
+import pathlib
 import shutil
+import threading
 from contextlib import suppress
 from typing import Callable
 
 
-FOLDER = f"{os.getenv('LOCALAPPDATA')}/CountdownGame/data"
-TEMPORARY_FOLDER = f"{FOLDER}/temp"
+FOLDER = pathlib.Path(os.getenv("LOCALAPPDATA")) / "CountdownGame" / "data"
+TEMPORARY_FOLDER = FOLDER / "temp"
+LOCK_FILE = FOLDER / "lock"
 
 
 def check_folder_exists(folder: str = FOLDER) -> Callable:
@@ -18,21 +21,20 @@ def check_folder_exists(folder: str = FOLDER) -> Callable:
     """
     def decorator(function: Callable) -> Callable:
         def wrap(*args, **kwargs) -> Callable:
-            for i, char in enumerate(folder + "/"):
-                if char == "/" and not folder[:i].endswith(":"):
+            for i, char in enumerate(f"{folder}/"):
+                if char == "/" and not str(folder)[:i].endswith(":"):
                     with suppress(FileExistsError):
-                        os.mkdir(folder[:i])
+                        os.mkdir(str(folder)[:i])
             return function(*args, **kwargs)
         return wrap
     return decorator
 
 
-@check_folder_exists(TEMPORARY_FOLDER)
 def create_temp_folder() -> None:
     """
     Creates the temporary folder, if it does not already exist.
     """
-    return
+    TEMPORARY_FOLDER.mkdir(parents=True, exist_ok=True)
 
 
 def remove_temp_folder() -> None:
@@ -49,3 +51,20 @@ def reset_data() -> None:
     """
     with suppress(FileNotFoundError):
         shutil.rmtree(FOLDER)
+
+
+def get_lockfile_value() -> int:
+    """
+    Retrieves the current number stored in the lockfile,
+    -1 if it does not exist.
+    """
+    if not LOCK_FILE.exists():
+        return -1
+    return int(LOCK_FILE.read_text())
+
+
+def increment_lockfile_value() -> int:
+    """Increases the number stored in the lockfile by 1."""
+    LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    value = get_lockfile_value() + 1
+    LOCK_FILE.write_text(str(value))

@@ -2,10 +2,28 @@
 Utility functions for the rest of the application.
 """
 import datetime
+import pathlib
+import threading
+import time
 import tkinter as tk
 from ctypes import cdll, c_double, CDLL
 
 from pygame import mixer
+
+from .colours import BLACK
+from .io import get_lockfile_value, increment_lockfile_value
+
+
+mixer.init()
+
+APP_FOLDER = pathlib.Path(__file__).parent.parent.parent
+BIN_FOLDER = APP_FOLDER / "bin"
+AUDIO_FOLDER = APP_FOLDER / "audio"
+MUSIC_FOLDER = AUDIO_FOLDER / "music"
+SFX_FOLDER = AUDIO_FOLDER / "sfx"
+
+LOCKFILE_REFRESH_SECONDS = 0.1
+LOCKFILE_NO_INCREMENT_SECONDS = 0.2
 
 
 def load_cpp_library(filename: str) -> CDLL:
@@ -13,17 +31,11 @@ def load_cpp_library(filename: str) -> CDLL:
     Loads a C++ library in the bin folder with a particular filename.
     Path not required, just the name of the file.
     """
-    return cdll.LoadLibrary(f"./bin/{filename}")
+    return cdll.LoadLibrary(str(BIN_FOLDER / filename))
 
 
 fast_eval = load_cpp_library("generate.so").eval
 fast_eval.restype = c_double
-
-mixer.init()
-
-AUDIO_FOLDER = "./audio"
-MUSIC_FOLDER = f"{AUDIO_FOLDER}/music"
-SFX_FOLDER = f"{AUDIO_FOLDER}/sfx"
 
 
 def ink_free(size: int, bold: bool = False, italic: bool = False) -> tuple:
@@ -56,7 +68,7 @@ def evaluate(expression: str) -> int | float:
 
 def draw_circle(
     canvas: tk.Canvas, x: int, y: int, radius: int,
-    fill: str | None = None, outline: str = "black") -> None:
+    fill: str | None = None, outline: str = BLACK) -> None:
     """
     Draws a circle with a given centre and radius onto the canvas.
     """
@@ -131,7 +143,7 @@ def get_sfx(filename: str) -> mixer.Sound:
     Gets the SFX with a particular filename, returning a Sound object.
     Path not required, just the name of the file.
     """
-    return mixer.Sound(f"{SFX_FOLDER}/{filename}")
+    return mixer.Sound(SFX_FOLDER / filename)
 
 
 def get_music(filename: str) -> mixer.Sound:
@@ -139,4 +151,26 @@ def get_music(filename: str) -> mixer.Sound:
     Gets the music with a particular filename, returning a Sound object.
     Path not required, just the name of the file.
     """
-    return mixer.Sound(f"{MUSIC_FOLDER}/{filename}")
+    return mixer.Sound(MUSIC_FOLDER / filename)
+
+
+def is_already_running() -> bool:
+    """Returns True if an app instance is already running, else False."""
+    start = get_lockfile_value()
+    time.sleep(LOCKFILE_NO_INCREMENT_SECONDS)
+    end = get_lockfile_value()
+    return start != end
+
+
+def increment_lockfile_forever() -> None:
+    """Keep on incrementing the lockfile value until the app closes."""
+    while True:
+        increment_lockfile_value()
+        time.sleep(LOCKFILE_REFRESH_SECONDS)
+
+
+def set_as_running() -> None:
+    """
+    Indicates the app to be running by continuously updating the lock file.
+    """
+    threading.Thread(target=increment_lockfile_forever, daemon=True).start()

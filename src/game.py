@@ -229,7 +229,7 @@ class SelectNumbersFrame(tk.Frame):
         Automatically selects numbers (from options).
         """
         if not small_remaining and not big_remaining:
-            # No more numbers to select. Exit.
+            # No more numbers to select. Exit function.
             return
         if not small_remaining:
             # Only big numbers remain.
